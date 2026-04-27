@@ -421,10 +421,30 @@ body {
   margin-bottom: 16px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
 }
 .alert-error { background: #ef444415; border: 1px solid #ef444440; color: #fca5a5; }
 .alert-success { background: #22c55e15; border: 1px solid #22c55e40; color: #86efac; }
+
+.alert-action {
+  min-height: 30px;
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid currentColor;
+  border-radius: 8px;
+  color: inherit;
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.alert-action:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
 
 /* ===================== TABLE ===================== */
 .table-section { padding: 0; }

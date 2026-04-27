@@ -175,6 +175,20 @@ function ensureSupabaseReady() {
   }
 }
 
+function getSupabaseErrorMessage(error, action) {
+  const message = error?.message || "Error desconocido";
+
+  if (message.includes("row-level security")) {
+    return `Supabase bloqueó ${action} por políticas RLS. Ejecuta el bloque de políticas de supabase/schema.sql en el SQL Editor.`;
+  }
+
+  if (message.includes("relation") && message.includes("does not exist")) {
+    return `No existe la tabla release_records en Supabase. Ejecuta supabase/schema.sql en el SQL Editor del proyecto correcto.`;
+  }
+
+  return message;
+}
+
 function findHeaderRow(rows) {
   return rows.findIndex((row) => {
     const fields = row.map(resolveFieldKey).filter(Boolean);
@@ -268,7 +282,7 @@ async function fetchReleaseDataFromSupabase() {
     .select("*")
     .order("id", { ascending: true });
 
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(getSupabaseErrorMessage(error, "leer registros"));
   return (data || []).map(fromDatabaseRow);
 }
 
@@ -280,7 +294,7 @@ async function replaceReleaseDataInSupabase(rows) {
     .delete()
     .gt("id", 0);
 
-  if (deleteError) throw new Error(deleteError.message);
+  if (deleteError) throw new Error(getSupabaseErrorMessage(deleteError, "reemplazar registros"));
   if (!rows.length) return [];
 
   const { data, error } = await supabase
@@ -288,8 +302,96 @@ async function replaceReleaseDataInSupabase(rows) {
     .insert(rows.map(toDatabaseRow))
     .select("*");
 
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(getSupabaseErrorMessage(error, "importar registros"));
   return (data || []).map(fromDatabaseRow);
+}
+
+export async function checkDataBackend({ testWrite = false } = {}) {
+  if (!isSupabaseConfigured) {
+    return {
+      ok: true,
+      mode: "local",
+      canRead: true,
+      canWrite: false,
+      message: "La app está en modo local; los datos no se comparten entre usuarios.",
+    };
+  }
+
+  ensureSupabaseReady();
+
+  const readResult = await supabase
+    .from(RELEASE_TABLE)
+    .select("id", { count: "exact", head: true });
+
+  if (readResult.error) {
+    return {
+      ok: false,
+      mode: "supabase",
+      canRead: false,
+      canWrite: false,
+      message: getSupabaseErrorMessage(readResult.error, "leer registros"),
+    };
+  }
+
+  if (!testWrite) {
+    return {
+      ok: true,
+      mode: "supabase",
+      canRead: true,
+      canWrite: null,
+      message: "Supabase responde para lectura. Usa Probar escritura para validar registros de otros usuarios.",
+    };
+  }
+
+  const testRow = {
+    Release: `healthcheck-${Date.now()}`,
+    Proyecto: "Healthcheck",
+    Flujo: "",
+    "en Base a": "",
+    Funcionalidades: "Prueba temporal de conexión Supabase",
+    "Pase a producción": "NO",
+    "Fecha de Pase": "",
+    Activo: "NO",
+  };
+
+  const insertResult = await supabase
+    .from(RELEASE_TABLE)
+    .insert(toDatabaseRow(testRow))
+    .select("id")
+    .single();
+
+  if (insertResult.error) {
+    return {
+      ok: false,
+      mode: "supabase",
+      canRead: true,
+      canWrite: false,
+      message: getSupabaseErrorMessage(insertResult.error, "crear registros"),
+    };
+  }
+
+  const deleteResult = await supabase
+    .from(RELEASE_TABLE)
+    .delete()
+    .eq("id", insertResult.data.id);
+
+  if (deleteResult.error) {
+    return {
+      ok: false,
+      mode: "supabase",
+      canRead: true,
+      canWrite: true,
+      message: getSupabaseErrorMessage(deleteResult.error, "eliminar la fila temporal de prueba"),
+    };
+  }
+
+  return {
+    ok: true,
+    mode: "supabase",
+    canRead: true,
+    canWrite: true,
+    message: "Supabase conectado con permisos de lectura y escritura.",
+  };
 }
 
 /**
@@ -312,7 +414,7 @@ export async function appendReleaseRow(rowData) {
       .select("*")
       .single();
 
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(getSupabaseErrorMessage(error, "crear el registro"));
     return fromDatabaseRow(data);
   }
 
@@ -344,7 +446,7 @@ export async function updateReleaseRow(rowIndex, rowData) {
       .select("*")
       .single();
 
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(getSupabaseErrorMessage(error, "actualizar el registro"));
     return fromDatabaseRow(data);
   }
 
@@ -367,7 +469,7 @@ export async function deleteReleaseRow(rowIndex) {
       .delete()
       .eq("id", rowIndex);
 
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(getSupabaseErrorMessage(error, "eliminar el registro"));
     return;
   }
 

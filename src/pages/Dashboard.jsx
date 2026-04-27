@@ -9,6 +9,7 @@ import {
   importFromExcel,
   deleteAllReleaseRows,
   isSupabaseBackendEnabled,
+  checkDataBackend,
 } from "../services/localExcelService";
 
 function isYes(value) {
@@ -23,6 +24,8 @@ export default function Dashboard({ onLogout }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [fetchError, setFetchError] = useState(null);
   const [importLoading, setImportLoading] = useState(false);
+  const [backendStatus, setBackendStatus] = useState(null);
+  const [backendChecking, setBackendChecking] = useState(false);
   const fileInputRef = useRef(null);
 
   const loadData = useCallback(async () => {
@@ -38,6 +41,27 @@ export default function Dashboard({ onLogout }) {
   useEffect(() => {
     loadData();
   }, []);
+
+  const handleBackendCheck = useCallback(async (testWrite = false) => {
+    setBackendChecking(true);
+    try {
+      const status = await checkDataBackend({ testWrite });
+      setBackendStatus(status);
+    } catch (err) {
+      setBackendStatus({
+        ok: false,
+        message: err.message || "No se pudo validar la conexión con Supabase.",
+      });
+    } finally {
+      setBackendChecking(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isSupabaseBackendEnabled) {
+      handleBackendCheck(false);
+    }
+  }, [handleBackendCheck]);
 
   const handleEdit = (row) => {
     setEditData(row);
@@ -186,6 +210,19 @@ export default function Dashboard({ onLogout }) {
             📥 Exportar Excel
           </button>
         </div>
+
+        {isSupabaseBackendEnabled && backendStatus && (
+          <div className={`alert ${backendStatus.ok ? "alert-success" : "alert-error"}`}>
+            <span>{backendStatus.ok ? "✓" : "⚠"} {backendStatus.message}</span>
+            <button
+              className="alert-action"
+              onClick={() => handleBackendCheck(true)}
+              disabled={backendChecking}
+            >
+              {backendChecking ? "Probando..." : "Probar escritura"}
+            </button>
+          </div>
+        )}
 
         <div className="tab-content">
           {activeTab === "form" && (
