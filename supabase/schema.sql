@@ -35,6 +35,10 @@ execute function public.set_release_records_updated_at();
 
 alter table public.release_records enable row level security;
 
+grant usage on schema public to anon, authenticated;
+grant select, insert, update, delete on public.release_records to anon, authenticated;
+grant usage, select on sequence public.release_records_id_seq to anon, authenticated;
+
 drop policy if exists "release_records_select_public" on public.release_records;
 drop policy if exists "release_records_insert_public" on public.release_records;
 drop policy if exists "release_records_update_public" on public.release_records;
@@ -43,26 +47,26 @@ drop policy if exists "release_records_delete_public" on public.release_records;
 create policy "release_records_select_public"
 on public.release_records
 for select
-to anon, authenticated
+to public
 using (true);
 
 create policy "release_records_insert_public"
 on public.release_records
 for insert
-to anon, authenticated
+to public
 with check (true);
 
 create policy "release_records_update_public"
 on public.release_records
 for update
-to anon, authenticated
+to public
 using (true)
 with check (true);
 
 create policy "release_records_delete_public"
 on public.release_records
 for delete
-to anon, authenticated
+to public
 using (true);
 
 create index if not exists idx_release_records_proyecto
@@ -73,4 +77,3 @@ on public.release_records (pase_a_produccion);
 
 create index if not exists idx_release_records_activo
 on public.release_records (activo);
-
