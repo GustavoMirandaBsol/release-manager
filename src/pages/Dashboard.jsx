@@ -130,6 +130,12 @@ export default function Dashboard({ onLogout }) {
           </div>
           <div className="stat-item">
             <span className="stat-number">
+              {data.filter((r) => isYes(r["Pase a producción"])).length}
+            </span>
+            <span className="stat-label stat-ok">Pase a prod.</span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-number">
               {data.filter((r) => !isYes(r["Pase a producción"])).length}
             </span>
             <span className="stat-label stat-warn">Pendiente pase prod.</span>
