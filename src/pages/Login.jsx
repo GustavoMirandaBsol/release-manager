@@ -1,6 +1,6 @@
 // src/pages/Login.jsx
 import { useState } from "react";
-import { importFromExcel } from "../services/localExcelService";
+import { importFromExcel, isSupabaseBackendEnabled } from "../services/localExcelService";
 
 export default function Login({ onLoginSuccess }) {
   const [loading, setLoading] = useState(false);
@@ -35,13 +35,19 @@ export default function Login({ onLoginSuccess }) {
         </div>
         <h1 className="login-title">Release Candidate<br />Manager</h1>
         <p className="login-subtitle">
-          Gestión de releases y funcionalidades en Excel local
+          {isSupabaseBackendEnabled
+            ? "Gestión compartida de releases y funcionalidades"
+            : "Gestión de releases y funcionalidades en Excel local"}
         </p>
 
         <div className="login-features">
           <div className="feature-item">
             <span className="feature-icon">💾</span>
-            <span>Almacenamiento local (sin servidor)</span>
+            <span>
+              {isSupabaseBackendEnabled
+                ? "Base de datos compartida con Supabase"
+                : "Almacenamiento local (sin servidor)"}
+            </span>
           </div>
           <div className="feature-item">
             <span className="feature-icon">🔍</span>
@@ -73,7 +79,11 @@ export default function Login({ onLoginSuccess }) {
             <polyline points="17 8 12 3 7 8"></polyline>
             <line x1="12" y1="3" x2="12" y2="15"></line>
           </svg>
-          {loading ? "Iniciando..." : "Iniciar en modo local"}
+          {loading
+            ? "Iniciando..."
+            : isSupabaseBackendEnabled
+              ? "Iniciar en modo compartido"
+              : "Iniciar en modo local"}
         </button>
 
         <div className="divider">O importa un archivo</div>
@@ -95,7 +105,9 @@ export default function Login({ onLoginSuccess }) {
         </label>
 
         <p className="login-footer">
-          Todos los datos se guardan localmente en tu navegador
+          {isSupabaseBackendEnabled
+            ? "Los datos se guardan en la base compartida del proyecto"
+            : "Todos los datos se guardan localmente en tu navegador"}
         </p>
       </div>
     </div>

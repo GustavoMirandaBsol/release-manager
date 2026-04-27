@@ -8,6 +8,7 @@ import {
   exportToExcel,
   importFromExcel,
   deleteAllReleaseRows,
+  isSupabaseBackendEnabled,
 } from "../services/localExcelService";
 
 function isYes(value) {
@@ -49,9 +50,10 @@ export default function Dashboard({ onLogout }) {
     setActiveTab("tabla");
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
+    setFetchError(null);
     try {
-      exportToExcel();
+      await call(exportToExcel);
     } catch (err) {
       setFetchError(err.message);
     }
@@ -108,8 +110,12 @@ export default function Dashboard({ onLogout }) {
           <div className="user-info">
             <div className="user-avatar">L</div>
             <div>
-              <p className="user-name">Modo Local</p>
-              <p className="user-email">Almacenamiento en navegador</p>
+              <p className="user-name">
+                {isSupabaseBackendEnabled ? "Modo Compartido" : "Modo Local"}
+              </p>
+              <p className="user-email">
+                {isSupabaseBackendEnabled ? "Base de datos Supabase" : "Almacenamiento en navegador"}
+              </p>
             </div>
           </div>
           <button className="btn-logout" onClick={onLogout}>Salir</button>

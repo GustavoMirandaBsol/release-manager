@@ -1,7 +1,9 @@
 // src/services/localExcelService.js
 import * as XLSX from "xlsx";
+import { isSupabaseConfigured, supabase } from "./supabaseClient";
 
 const RELEASE_SHEET_NAME = "Release y funcionalidades";
+const RELEASE_TABLE = "release_records";
 const STORAGE_KEY = "releaseManagerData";
 const META_STORAGE_KEY = "releaseManagerMeta";
 const FILENAME = "Release_y_funcionalidades.xlsx";
@@ -20,6 +22,8 @@ const RELEASE_FIELDS = [
 const FIELD_KEYS = RELEASE_FIELDS.map((field) => field.key);
 const EXPORT_HEADERS = RELEASE_FIELDS.map((field) => field.header);
 
+export const isSupabaseBackendEnabled = isSupabaseConfigured;
+
 const FALLBACK_NOMENCLATURA = {
   abreviaciones: ["CT", "FD", "FH", "TDH", "FO", "DIF", "ALL"],
   flujos: [
@@ -32,12 +36,18 @@ const FALLBACK_NOMENCLATURA = {
     "Tranversal",
   ],
   proyectos: [
+    "CRM",
     "Crm",
+    "BUM",
+    "BFF-PB",
+    "WC-PB",
+    "Reporting Services",
+    "document Library",
+    "Signature",
     "doc library",
     "CRA",
     "Web Client-Loans",
     "BFF -loans",
-    "BUM",
   ],
 };
 
@@ -128,6 +138,43 @@ function normalizeReleaseRow(row, fallbackRowIndex) {
   return normalized;
 }
 
+function toDatabaseRow(row) {
+  const normalized = normalizeReleaseRow(row, row._rowIndex || 0);
+  return {
+    release: normalized.Release,
+    proyecto: normalized.Proyecto,
+    flujo: normalized.Flujo,
+    en_base_a: normalized["en Base a"],
+    funcionalidades: normalized.Funcionalidades,
+    pase_a_produccion: normalized["Pase a producción"] || "NO",
+    fecha_de_pase: normalized["Fecha de Pase"] || null,
+    activo: normalized.Activo || "SI",
+  };
+}
+
+function fromDatabaseRow(row, index = 0) {
+  return normalizeReleaseRow(
+    {
+      _rowIndex: row.id || index + 2,
+      Release: row.release,
+      Proyecto: row.proyecto,
+      Flujo: row.flujo,
+      "en Base a": row.en_base_a,
+      Funcionalidades: row.funcionalidades,
+      "Pase a producción": row.pase_a_produccion,
+      "Fecha de Pase": row.fecha_de_pase,
+      Activo: row.activo,
+    },
+    row.id || index + 2
+  );
+}
+
+function ensureSupabaseReady() {
+  if (!isSupabaseConfigured || !supabase) {
+    throw new Error("Supabase no está configurado");
+  }
+}
+
 function findHeaderRow(rows) {
   return rows.findIndex((row) => {
     const fields = row.map(resolveFieldKey).filter(Boolean);
@@ -213,10 +260,43 @@ function saveReleaseData(data) {
   );
 }
 
+async function fetchReleaseDataFromSupabase() {
+  ensureSupabaseReady();
+
+  const { data, error } = await supabase
+    .from(RELEASE_TABLE)
+    .select("*")
+    .order("id", { ascending: true });
+
+  if (error) throw new Error(error.message);
+  return (data || []).map(fromDatabaseRow);
+}
+
+async function replaceReleaseDataInSupabase(rows) {
+  ensureSupabaseReady();
+
+  const { error: deleteError } = await supabase
+    .from(RELEASE_TABLE)
+    .delete()
+    .gt("id", 0);
+
+  if (deleteError) throw new Error(deleteError.message);
+  if (!rows.length) return [];
+
+  const { data, error } = await supabase
+    .from(RELEASE_TABLE)
+    .insert(rows.map(toDatabaseRow))
+    .select("*");
+
+  if (error) throw new Error(error.message);
+  return (data || []).map(fromDatabaseRow);
+}
+
 /**
  * Fetch all rows
  */
 export async function fetchReleaseData() {
+  if (isSupabaseConfigured) return fetchReleaseDataFromSupabase();
   return getReleaseData();
 }
 
@@ -224,6 +304,18 @@ export async function fetchReleaseData() {
  * Append a new row
  */
 export async function appendReleaseRow(rowData) {
+  if (isSupabaseConfigured) {
+    ensureSupabaseReady();
+    const { data, error } = await supabase
+      .from(RELEASE_TABLE)
+      .insert(toDatabaseRow(rowData))
+      .select("*")
+      .single();
+
+    if (error) throw new Error(error.message);
+    return fromDatabaseRow(data);
+  }
+
   const data = getReleaseData();
   const maxRowIndex = data.reduce((max, row) => Math.max(max, Number(row._rowIndex) || 1), 1);
   const newRow = {
@@ -240,6 +332,22 @@ export async function appendReleaseRow(rowData) {
  * Update an existing row
  */
 export async function updateReleaseRow(rowIndex, rowData) {
+  if (isSupabaseConfigured) {
+    ensureSupabaseReady();
+    const { data, error } = await supabase
+      .from(RELEASE_TABLE)
+      .update({
+        ...toDatabaseRow(rowData),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", rowIndex)
+      .select("*")
+      .single();
+
+    if (error) throw new Error(error.message);
+    return fromDatabaseRow(data);
+  }
+
   const data = getReleaseData();
   const index = data.findIndex((r) => r._rowIndex === rowIndex);
   if (index === -1) throw new Error("Row not found");
@@ -252,6 +360,17 @@ export async function updateReleaseRow(rowIndex, rowData) {
  * Delete a row
  */
 export async function deleteReleaseRow(rowIndex) {
+  if (isSupabaseConfigured) {
+    ensureSupabaseReady();
+    const { error } = await supabase
+      .from(RELEASE_TABLE)
+      .delete()
+      .eq("id", rowIndex);
+
+    if (error) throw new Error(error.message);
+    return;
+  }
+
   const data = getReleaseData();
   const filtered = data.filter((r) => r._rowIndex !== rowIndex);
   saveReleaseData(filtered);
@@ -261,6 +380,10 @@ export async function deleteReleaseRow(rowIndex) {
  * Delete all release rows
  */
 export async function deleteAllReleaseRows() {
+  if (isSupabaseConfigured) {
+    return replaceReleaseDataInSupabase([]);
+  }
+
   saveReleaseData([]);
   return [];
 }
@@ -268,8 +391,8 @@ export async function deleteAllReleaseRows() {
 /**
  * Export data to Excel file
  */
-export function exportToExcel() {
-  const data = getReleaseData();
+export async function exportToExcel() {
+  const data = await fetchReleaseData();
   const wsData = [
     EXPORT_HEADERS,
     ...data.map((row) => FIELD_KEYS.map((key) => row[key] || "")),
@@ -286,7 +409,7 @@ export function exportToExcel() {
 export function importFromExcel(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const data = new Uint8Array(e.target.result);
         const workbook = XLSX.read(data, { type: "array", cellDates: true });
@@ -316,6 +439,12 @@ export function importFromExcel(file) {
         });
 
         saveMetadata(parseNomenclatura(workbook));
+        if (isSupabaseConfigured) {
+          const savedData = await replaceReleaseDataInSupabase(importedData);
+          resolve(savedData);
+          return;
+        }
+
         saveReleaseData(importedData);
         resolve(importedData);
       } catch (err) {
@@ -332,7 +461,8 @@ export function importFromExcel(file) {
  */
 export async function fetchNomenclatura() {
   const metadata = getStoredMetadata();
-  const dataProjects = getReleaseData().map((row) => row.Proyecto);
+  const rows = isSupabaseConfigured ? await fetchReleaseDataFromSupabase() : getReleaseData();
+  const dataProjects = rows.map((row) => row.Proyecto);
 
   return {
     abreviaciones: metadata.abreviaciones || FALLBACK_NOMENCLATURA.abreviaciones,

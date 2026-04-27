@@ -40,6 +40,8 @@ jobs:
           VITE_REDIRECT_URI: ${{ secrets.VITE_REDIRECT_URI }}
           VITE_SHAREPOINT_SITE_ID: ${{ secrets.VITE_SHAREPOINT_SITE_ID }}
           VITE_EXCEL_FILE_ID: ${{ secrets.VITE_EXCEL_FILE_ID }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         run: npm run build
 
       - name: Setup Pages

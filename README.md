@@ -1,145 +1,101 @@
-# 🚀 Release Candidate Manager
+# Release Candidate Manager
 
-Aplicación web para registrar y visualizar releases en el Excel de SharePoint. Construida con React + Vite, autenticación Microsoft (MSAL) y Microsoft Graph API.
+Aplicación React + Vite para registrar, importar, editar, filtrar y exportar releases.
 
----
+La app puede trabajar en dos modos:
 
-## 📋 Características
+- **Supabase compartido**: todos los usuarios ven y editan la misma información.
+- **Local**: si no hay variables de Supabase, usa `localStorage` del navegador.
 
-- ✅ Login con cuenta Microsoft (OAuth MSAL)
-- ✅ Registro de releases directamente en el Excel de SharePoint
-- ✅ Visualización de todos los registros con filtros y búsqueda
-- ✅ Edición de registros existentes
-- ✅ Dashboard con estadísticas (total, riesgo alto, pendientes)
-- ✅ Deploy automático a GitHub Pages
+## Configurar Supabase
 
----
+1. Crea un proyecto en Supabase.
+2. Abre **SQL Editor**.
+3. Ejecuta el script:
 
-## ⚙️ Configuración inicial
-
-### 1. Registrar la aplicación en Azure AD
-
-1. Ve a [portal.azure.com](https://portal.azure.com) → **Azure Active Directory** → **App registrations**
-2. Haz clic en **New registration**
-3. Nombre: `Release Manager` (o el que prefieras)
-4. En **Redirect URI**: selecciona "Single-page application (SPA)" y agrega:
-   - `http://localhost:5173` (para desarrollo)
-   - `https://TU_USUARIO.github.io/TU_REPO/` (para producción)
-5. Guarda el **Application (client) ID** y el **Directory (tenant) ID**
-6. Ve a **API permissions** → **Add a permission** → **Microsoft Graph** → **Delegated**:
-   - `User.Read`
-   - `Sites.ReadWrite.All`
-   - `Files.ReadWrite.All`
-7. Haz clic en **Grant admin consent**
-
-### 2. Obtener el Site ID de SharePoint
-
-Abre [Graph Explorer](https://developer.microsoft.com/graph/graph-explorer) e inicia sesión:
-
-```
-GET https://graph.microsoft.com/v1.0/sites/{tu-dominio}.sharepoint.com:/sites/{nombre-sitio}
+```text
+supabase/schema.sql
 ```
 
-Copia el campo `"id"` del resultado.
+4. En Supabase ve a **Project Settings** -> **API** y copia:
+   - Project URL
+   - anon public key
 
-### 3. Obtener el File ID del Excel
-
-```
-GET https://graph.microsoft.com/v1.0/sites/{siteId}/drive/root/children
-```
-
-Busca el archivo `GESTIÓN_RELEASE_CANDIDATE.xlsx` y copia su `"id"`.
-
-### 4. Configurar variables de entorno
-
-Copia `.env.example` a `.env.local` y completa los valores:
-
-```bash
-cp .env.example .env.local
-```
+5. Para desarrollo local, crea `.env.local`:
 
 ```env
-VITE_CLIENT_ID=tu-client-id
-VITE_TENANT_ID=tu-tenant-id
-VITE_REDIRECT_URI=http://localhost:5173
-VITE_SHAREPOINT_SITE_ID=tu-site-id
-VITE_EXCEL_FILE_ID=tu-file-id
+VITE_SUPABASE_URL=https://TU_PROYECTO.supabase.co
+VITE_SUPABASE_ANON_KEY=TU_SUPABASE_ANON_KEY
 ```
 
----
+6. Para GitHub Pages, agrega estos secrets en:
 
-## 🛠️ Desarrollo local
+`Settings` -> `Secrets and variables` -> `Actions`
+
+```text
+VITE_SUPABASE_URL
+VITE_SUPABASE_ANON_KEY
+```
+
+Al hacer push a `main`, GitHub Actions compila la app con esos secrets.
+
+## Desarrollo Local
 
 ```bash
 npm install
 npm run dev
 ```
 
-Abre http://localhost:5173
+Abre:
 
----
-
-## 🌐 Deploy a GitHub Pages
-
-### Opción A: Automático con GitHub Actions (recomendado)
-
-1. En GitHub, ve a tu repo → **Settings** → **Secrets and variables** → **Actions**
-2. Agrega estos secrets:
-   - `VITE_CLIENT_ID`
-   - `VITE_TENANT_ID`
-   - `VITE_REDIRECT_URI` → `https://TU_USUARIO.github.io/TU_REPO/`
-   - `VITE_SHAREPOINT_SITE_ID`
-   - `VITE_EXCEL_FILE_ID`
-3. Ve a **Settings** → **Pages** → Source: **GitHub Actions**
-4. Haz push a `main` y el workflow se ejecuta automáticamente
-
-### Opción B: Manual
-
-```bash
-# Crear .env.local con los valores de producción primero
-npm run build
-npx gh-pages -d dist
+```text
+http://localhost:5173
 ```
 
----
+## Publicar En GitHub Pages
 
-## 📁 Estructura del proyecto
+El proyecto ya incluye `.github/workflows/deploy.yml`.
 
-```
-release-manager/
-├── src/
-│   ├── components/
-│   │   ├── ReleaseForm.jsx     # Formulario de registro
-│   │   └── ReleaseTable.jsx    # Tabla con filtros
-│   ├── hooks/
-│   │   └── useGraphApi.js      # Hook para llamadas a Graph API
-│   ├── pages/
-│   │   ├── Dashboard.jsx       # Pantalla principal
-│   │   └── Login.jsx           # Pantalla de login
-│   ├── services/
-│   │   ├── authConfig.js       # Configuración MSAL
-│   │   └── graphService.js     # Llamadas a Microsoft Graph
-│   ├── App.jsx
-│   ├── main.jsx
-│   └── styles.css
-├── .github/workflows/deploy.yml
-├── .env.example
-└── vite.config.js
+En GitHub:
+
+1. Ve a `Settings` -> `Pages`.
+2. En `Build and deployment`, selecciona `GitHub Actions`.
+3. Haz push a `main`.
+
+La app se publicará en:
+
+```text
+https://gustavomirandabsol.github.io/release-manager/
 ```
 
----
+## Columnas Del Registro
 
-## 🔧 Hoja de Excel esperada
+La app trabaja con estos campos:
 
-La app trabaja con la hoja **"Release y funcionalidades"** que debe tener estos encabezados en la fila 1:
+| Campo |
+|---|
+| Release |
+| Proyecto |
+| Flujo |
+| en Base a |
+| Funcionalidades |
+| Pase a producción |
+| Fecha de Pase |
+| Activo |
 
-| Feature | Release | Proyectos | Flujos | en Base a | Funcionalidades | Pase a producción | Update a Dev | Riesgo |
-|---------|---------|-----------|--------|-----------|-----------------|-------------------|--------------|--------|
+## Importar Excel
 
----
+El importador busca la hoja:
 
-## 📝 Notas
+```text
+Release y funcionalidades
+```
 
-- Los datos del formulario se escriben directamente en el Excel de SharePoint vía Microsoft Graph API
-- Se requieren permisos de administrador para hacer `Grant admin consent` en Azure AD
-- El archivo `.env.local` **nunca** debe subirse a GitHub (está en `.gitignore`)
+Y reconoce los encabezados reales del archivo Excel.
+
+## Nota De Seguridad
+
+El SQL incluido permite lectura, creación, edición y borrado público usando la anon key. Esto es práctico para un MVP interno con enlace compartido, pero cualquier persona con acceso a la app podría modificar registros.
+
+Para un uso más controlado, conviene agregar autenticación y políticas RLS por usuario o dominio.
+
