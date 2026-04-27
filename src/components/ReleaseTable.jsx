@@ -5,6 +5,7 @@ import { deleteReleaseRow } from "../services/localExcelService";
 export default function ReleaseTable({ data, onEdit, onDelete, loading, search, onSearchChange }) {
   const [internalSearch, setInternalSearch] = useState("");
   const [filterProyecto, setFilterProyecto] = useState("");
+  const [filterPaseProduccion, setFilterPaseProduccion] = useState("");
   const [filterActivo, setFilterActivo] = useState("");
   const [expandedRow, setExpandedRow] = useState(null);
 
@@ -19,6 +20,7 @@ export default function ReleaseTable({ data, onEdit, onDelete, loading, search, 
   };
 
   const proyectos = [...new Set(data.map((r) => r.Proyecto).filter(Boolean))];
+  const pasesProduccion = [...new Set(data.map((r) => r["Pase a producción"]).filter(Boolean))];
   const activos = [...new Set(data.map((r) => r.Activo).filter(Boolean))];
 
   const filtered = data.filter((row) => {
@@ -28,8 +30,9 @@ export default function ReleaseTable({ data, onEdit, onDelete, loading, search, 
         String(v).toLowerCase().includes(searchValue.toLowerCase())
       );
     const matchProyecto = !filterProyecto || row.Proyecto === filterProyecto;
+    const matchPaseProduccion = !filterPaseProduccion || row["Pase a producción"] === filterPaseProduccion;
     const matchActivo = !filterActivo || row.Activo === filterActivo;
-    return matchSearch && matchProyecto && matchActivo;
+    return matchSearch && matchProyecto && matchPaseProduccion && matchActivo;
   });
 
   const handleDelete = async (row) => {
@@ -69,6 +72,10 @@ export default function ReleaseTable({ data, onEdit, onDelete, loading, search, 
         <select value={filterProyecto} onChange={(e) => setFilterProyecto(e.target.value)}>
           <option value="">Todos los proyectos</option>
           {proyectos.map((p) => <option key={p} value={p}>{p}</option>)}
+        </select>
+        <select value={filterPaseProduccion} onChange={(e) => setFilterPaseProduccion(e.target.value)}>
+          <option value="">Todos los pases</option>
+          {pasesProduccion.map((value) => <option key={value} value={value}>{value}</option>)}
         </select>
         <select value={filterActivo} onChange={(e) => setFilterActivo(e.target.value)}>
           <option value="">Todos los estados</option>
