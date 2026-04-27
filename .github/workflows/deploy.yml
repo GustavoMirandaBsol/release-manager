@@ -33,6 +33,21 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Validate Supabase secrets
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$VITE_SUPABASE_URL" ]; then
+            echo "Missing GitHub Actions secret: VITE_SUPABASE_URL"
+            exit 1
+          fi
+          if [ -z "$VITE_SUPABASE_ANON_KEY" ]; then
+            echo "Missing GitHub Actions secret: VITE_SUPABASE_ANON_KEY"
+            exit 1
+          fi
+          echo "Supabase secrets are configured."
+
       - name: Build
         env:
           VITE_CLIENT_ID: ${{ secrets.VITE_CLIENT_ID }}
