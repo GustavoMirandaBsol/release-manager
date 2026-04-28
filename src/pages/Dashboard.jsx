@@ -40,6 +40,8 @@ export default function Dashboard({ user, onLogout }) {
   const [activeProjectTab, setActiveProjectTab] = useState("");
   const [showGeneralSummary, setShowGeneralSummary] = useState(false);
   const [showProjectSummary, setShowProjectSummary] = useState(false);
+  const [expandedProjectRelease, setExpandedProjectRelease] = useState(null);
+  const [copiedReleaseKey, setCopiedReleaseKey] = useState(null);
   const fileInputRef = useRef(null);
   const canDeleteAll = !isSupabaseBackendEnabled || APPROVER_EMAILS.has(normalizeEmail(user?.email));
   const projectSummary = useMemo(() => {
@@ -117,6 +119,7 @@ export default function Dashboard({ user, onLogout }) {
   useEffect(() => {
     if (!projectSummary.length) {
       setActiveProjectTab("");
+      setExpandedProjectRelease(null);
       return;
     }
 
@@ -124,6 +127,10 @@ export default function Dashboard({ user, onLogout }) {
       setActiveProjectTab(projectSummary[0].project);
     }
   }, [activeProjectTab, projectSummary]);
+
+  useEffect(() => {
+    setExpandedProjectRelease(null);
+  }, [activeProjectTab]);
 
   const loadData = useCallback(async () => {
     setFetchError(null);
@@ -164,6 +171,20 @@ export default function Dashboard({ user, onLogout }) {
     setEditData(row);
     setActiveTab("form");
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleCopyRelease = async (releaseValue, releaseKey) => {
+    if (!releaseValue) return;
+
+    try {
+      await navigator.clipboard.writeText(releaseValue);
+      setCopiedReleaseKey(releaseKey);
+      window.setTimeout(() => {
+        setCopiedReleaseKey((current) => (current === releaseKey ? null : current));
+      }, 1800);
+    } catch (err) {
+      setFetchError(`No se pudo copiar el release: ${err.message}`);
+    }
   };
 
   const handleSuccess = () => {
@@ -349,22 +370,59 @@ export default function Dashboard({ user, onLogout }) {
                       {selectedProject.releases.map((row) => {
                         const inProduction = isYes(row["Pase a producción"]);
                         const active = isYes(row.Activo);
+                        const releaseKey = row._rowIndex || row.Release;
+                        const isExpanded = expandedProjectRelease === releaseKey;
                         return (
-                          <button
-                            key={row._rowIndex || row.Release}
-                            className={`project-release-item ${inProduction ? "production" : active ? "active-release" : "neutral"}`}
-                            type="button"
-                            onClick={() => handleEdit(row)}
+                          <div
+                            key={releaseKey}
+                            className={`project-release-entry ${isExpanded ? "expanded" : ""}`}
                           >
-                            <span className="release-index">{row._rowIndex || "-"}</span>
-                            <div className="release-main">
-                              <span className="release-name">{row.Release || "Sin release"}</span>
-                              <span className="release-meta">{row.Flujo || "Sin flujo"}</span>
-                            </div>
-                            <span className="release-state">
-                              {inProduction ? "Pase a producción" : active ? "Activo" : "Inactivo"}
-                            </span>
-                          </button>
+                            <button
+                              className={`project-release-item ${inProduction ? "production" : active ? "active-release" : "neutral"}`}
+                              type="button"
+                              onClick={() => setExpandedProjectRelease(isExpanded ? null : releaseKey)}
+                            >
+                              <span className="release-index">{row._rowIndex || "-"}</span>
+                              <div className="release-main">
+                                <span className="release-name">{row.Release || "Sin release"}</span>
+                                <span className="release-meta">{row.Flujo || "Sin flujo"}</span>
+                              </div>
+                              <span className="release-state">
+                                {inProduction ? "Pase a producción" : active ? "Activo" : "Inactivo"}
+                              </span>
+                            </button>
+
+                            {isExpanded && (
+                              <div className="project-release-description">
+                                <div className="project-release-description-header">
+                                  <span className="detail-caption">Release creado</span>
+                                  <div className="release-copy-group">
+                                    <code>{row.Release || "Sin release"}</code>
+                                    <button
+                                      type="button"
+                                      className="copy-release-button"
+                                      onClick={() => handleCopyRelease(row.Release, releaseKey)}
+                                      title="Copiar nombre del release"
+                                    >
+                                      {copiedReleaseKey === releaseKey ? "✓" : "⧉"}
+                                    </button>
+                                  </div>
+                                </div>
+                                <p className="project-release-description-text">
+                                  {row.Funcionalidades || row["en Base a"] || "Sin descripción registrada para este release."}
+                                </p>
+                                <div className="project-release-description-actions">
+                                  <button
+                                    type="button"
+                                    className="inline-action"
+                                    onClick={() => handleEdit(row)}
+                                  >
+                                    Editar release
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         );
                       })}
                     </div>

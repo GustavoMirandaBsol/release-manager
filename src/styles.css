@@ -522,6 +522,17 @@ body {
   gap: 8px;
 }
 
+.project-release-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.project-release-entry.expanded .project-release-item {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
 .project-release-item {
   min-height: 0;
   padding: 12px 14px;
@@ -596,6 +607,85 @@ body {
   color: var(--text2);
   font-size: 11px;
   font-weight: 700;
+}
+
+.project-release-description {
+  border: 1px solid var(--border);
+  border-top: none;
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
+  background: #0f172a;
+  padding: 12px 14px 14px;
+}
+
+.project-release-description-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.detail-caption {
+  color: var(--text3);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.release-copy-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.release-copy-group code {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--accent);
+  background: #3b82f610;
+  border-radius: 6px;
+  padding: 5px 8px;
+  max-width: min(100%, 520px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.copy-release-button {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface2);
+  color: var(--text2);
+  cursor: pointer;
+  font-family: var(--sans);
+  font-size: 14px;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+
+.copy-release-button:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.project-release-description-text {
+  color: var(--text2);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.project-release-description-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
 }
 
 .project-legend {
