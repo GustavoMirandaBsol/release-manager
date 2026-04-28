@@ -1,24 +1,35 @@
 // src/pages/Login.jsx
 import { useState } from "react";
 import { importFromExcel, isSupabaseBackendEnabled } from "../services/localExcelService";
-import { signInWithGoogle } from "../services/authService";
+import { signInWithEmail } from "../services/authService";
 
 export default function Login({ onLoginSuccess }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [email, setEmail] = useState("");
+  const [magicLinkSent, setMagicLinkSent] = useState(false);
 
   const handleStartLocalMode = () => {
     setError(null);
     onLoginSuccess();
   };
 
-  const handleGoogleLogin = async () => {
+  const handleEmailLogin = async (e) => {
+    e.preventDefault();
+    if (!email.trim()) {
+      setError("Ingresa un correo electrónico.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
+    setMagicLinkSent(false);
     try {
-      await signInWithGoogle();
+      await signInWithEmail(email.trim());
+      setMagicLinkSent(true);
     } catch (err) {
-      setError(`Error al iniciar sesión con Google: ${err.message}`);
+      setError(`Error al enviar el enlace de acceso: ${err.message}`);
+    } finally {
       setLoading(false);
     }
   };
@@ -66,8 +77,8 @@ export default function Login({ onLoginSuccess }) {
             <span>Búsqueda y filtrado avanzado</span>
           </div>
           <div className="feature-item">
-            <span className="feature-icon">⚠️</span>
-            <span>Seguimiento de riesgos y estados</span>
+            <span className="feature-icon">ID</span>
+            <span>Acceso por correo y auditoría de usuarios</span>
           </div>
           <div className="feature-item">
             <span className="feature-icon">📥</span>
@@ -81,26 +92,42 @@ export default function Login({ onLoginSuccess }) {
           </div>
         )}
 
-        <button
-          className="btn-ms-login"
-          onClick={isSupabaseBackendEnabled ? handleGoogleLogin : handleStartLocalMode}
-          disabled={loading}
-        >
-          {isSupabaseBackendEnabled ? (
-            <span className="google-mark">G</span>
-          ) : (
+        {magicLinkSent && (
+          <div className="alert alert-success">
+            <span>✓ Revisa tu correo y abre el enlace de acceso.</span>
+          </div>
+        )}
+
+        {isSupabaseBackendEnabled ? (
+          <form className="login-form" onSubmit={handleEmailLogin}>
+            <input
+              className="login-input"
+              type="email"
+              placeholder="correo@empresa.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={loading}
+              required
+            />
+            <button className="btn-ms-login" type="submit" disabled={loading}>
+              <span className="google-mark">@</span>
+              {loading ? "Enviando..." : "Enviar enlace de acceso"}
+            </button>
+          </form>
+        ) : (
+          <button
+            className="btn-ms-login"
+            onClick={handleStartLocalMode}
+            disabled={loading}
+          >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
               <polyline points="17 8 12 3 7 8"></polyline>
               <line x1="12" y1="3" x2="12" y2="15"></line>
             </svg>
-          )}
-          {loading
-            ? "Iniciando..."
-            : isSupabaseBackendEnabled
-              ? "Ingresar con Google"
-              : "Iniciar en modo local"}
-        </button>
+            {loading ? "Iniciando..." : "Iniciar en modo local"}
+          </button>
+        )}
 
         {!isSupabaseBackendEnabled && (
           <>

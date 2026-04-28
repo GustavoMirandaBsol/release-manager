@@ -24,7 +24,7 @@ export async function getCurrentUserProfile() {
   return getUserProfile(data.user);
 }
 
-export async function signInWithGoogle() {
+export async function signInWithEmail(email) {
   if (!isSupabaseConfigured || !supabase) {
     throw new Error("Supabase no está configurado");
   }
@@ -33,10 +33,10 @@ export async function signInWithGoogle() {
   redirectUrl.hash = "";
   redirectUrl.search = "";
 
-  const { error } = await supabase.auth.signInWithOAuth({
-    provider: "google",
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
     options: {
-      redirectTo: redirectUrl.toString(),
+      emailRedirectTo: redirectUrl.toString(),
     },
   });
 
@@ -67,4 +67,3 @@ export async function recordPortalAccess(user, action = "login") {
     console.warn("No se pudo registrar el acceso al portal:", error.message);
   }
 }
-

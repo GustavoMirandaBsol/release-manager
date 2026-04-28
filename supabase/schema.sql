@@ -1,5 +1,5 @@
 -- Ejecuta este script en Supabase SQL Editor.
--- MVP con Google Auth: cualquier usuario autenticado con Google puede leer,
+-- MVP con Email Auth: cualquier usuario autenticado por correo puede leer,
 -- crear, editar y eliminar registros. La app guarda correo/nombre en auditoria.
 
 create table if not exists public.release_records (
@@ -35,7 +35,7 @@ create table if not exists public.portal_access_logs (
   user_id uuid not null,
   email text not null default '',
   full_name text not null default '',
-  provider text not null default 'google',
+  provider text not null default 'email',
   action text not null default 'login',
   user_agent text not null default '',
   accessed_at timestamptz not null default now()

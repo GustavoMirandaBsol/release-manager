@@ -4,7 +4,7 @@ Aplicación React + Vite para registrar, importar, editar, filtrar y exportar re
 
 La app puede trabajar en dos modos:
 
-- **Supabase compartido con Google**: los usuarios inician sesión con Google, todos ven la misma información y la base guarda quién accede/crea/edita.
+- **Supabase compartido con correo**: los usuarios reciben un Magic Link por correo, todos ven la misma información y la base guarda quién accede/crea/edita.
 - **Local**: si no hay variables de Supabase, usa `localStorage` del navegador.
 
 ## Configurar Supabase
@@ -39,24 +39,19 @@ VITE_SUPABASE_ANON_KEY
 
 Al hacer push a `main`, GitHub Actions compila la app con esos secrets.
 
-## Configurar Login Con Google
+## Configurar Login Por Correo
 
 En Supabase:
 
 1. Ve a `Authentication` -> `Providers`.
-2. Activa `Google`.
-3. Configura el Client ID y Client Secret de Google Cloud.
-4. En `Authentication` -> `URL Configuration`:
+2. Activa `Email`.
+3. En `Authentication` -> `URL Configuration`:
    - `Site URL`: `https://gustavomirandabsol.github.io/release-manager/`
    - `Redirect URLs`:
      - `https://gustavomirandabsol.github.io/release-manager/`
      - `http://localhost:5173/`
 
-En Google Cloud, el redirect autorizado del OAuth Client debe ser el callback de Supabase:
-
-```text
-https://TU_PROYECTO.supabase.co/auth/v1/callback
-```
+No necesitas Google Cloud Console para este modo.
 
 ## Consultar Accesos Y Auditoria
 
@@ -138,6 +133,6 @@ Y reconoce los encabezados reales del archivo Excel.
 
 ## Nota De Seguridad
 
-El SQL incluido permite lectura, creación, edición y borrado a cualquier usuario autenticado con Google en Supabase. Esto es práctico para un MVP interno con enlace compartido.
+El SQL incluido permite lectura, creación, edición y borrado a cualquier usuario autenticado por correo en Supabase. Esto es práctico para un MVP interno con enlace compartido.
 
 Para un uso más controlado, conviene restringir el acceso por dominio de correo, lista blanca de usuarios o roles.
