@@ -294,6 +294,7 @@ body {
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 14px;
+  flex-wrap: wrap;
 }
 
 .section-heading h2 {
@@ -309,6 +310,44 @@ body {
 
 .project-dashboard {
   margin: 24px 0 20px;
+}
+
+.summary-toggle {
+  min-height: 42px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text2);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 700;
+  min-width: 240px;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+
+.summary-toggle strong {
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--text3);
+  background: var(--surface2);
+  border-radius: 100px;
+  padding: 2px 8px;
+}
+
+.summary-toggle:hover,
+.summary-toggle.active {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.summary-toggle.active {
+  background: var(--surface2);
 }
 
 .project-tabs-panel {
@@ -985,4 +1024,5 @@ body {
   .record-search-input,
   .btn-refresh,
   .btn-danger { width: 100%; }
+  .summary-toggle { width: 100%; min-width: 0; }
 }
