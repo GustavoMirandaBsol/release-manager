@@ -1140,11 +1140,26 @@ body {
 
 .detail-row td { background: #3b82f608; }
 .detail-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   font-size: 12px;
   color: var(--text2);
-  padding: 4px 8px;
-  font-family: var(--mono);
+  padding: 8px 10px;
   line-height: 1.7;
+}
+
+.detail-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.detail-description {
+  color: var(--text2);
+  font-family: var(--sans);
+  font-size: 13px;
+  line-height: 1.6;
 }
 
 .btn-refresh {

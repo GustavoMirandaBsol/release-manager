@@ -8,6 +8,7 @@ export default function ReleaseTable({ data, onEdit, onDelete, loading, search, 
   const [filterPaseProduccion, setFilterPaseProduccion] = useState("");
   const [filterActivo, setFilterActivo] = useState("");
   const [expandedRow, setExpandedRow] = useState(null);
+  const [copiedRow, setCopiedRow] = useState(null);
 
   const useExternalSearch = typeof onSearchChange === "function";
   const searchValue = useExternalSearch ? search : internalSearch;
@@ -43,6 +44,21 @@ export default function ReleaseTable({ data, onEdit, onDelete, loading, search, 
       } catch (err) {
         alert(`Error al eliminar: ${err.message}`);
       }
+    }
+  };
+
+  const handleCopyRelease = async (releaseValue, rowKey, event) => {
+    event.stopPropagation();
+    if (!releaseValue) return;
+
+    try {
+      await navigator.clipboard.writeText(releaseValue);
+      setCopiedRow(rowKey);
+      window.setTimeout(() => {
+        setCopiedRow((current) => (current === rowKey ? null : current));
+      }, 1800);
+    } catch (err) {
+      alert(`No se pudo copiar el release: ${err.message}`);
     }
   };
 
@@ -150,18 +166,44 @@ export default function ReleaseTable({ data, onEdit, onDelete, loading, search, 
                       </button>
                     </td>
                   </tr>
-                  {expandedRow === i && (row["en Base a"] || row.createdByEmail || row.updatedByEmail) && (
+                  {expandedRow === i && (
                     <tr className="detail-row" key={`detail-${i}`}>
                       <td colSpan={8}>
                         <div className="detail-panel">
+                          <div className="detail-block">
+                            <span className="detail-caption">Release creado</span>
+                            <div className="release-copy-group">
+                              <code>{row.Release || "Sin release"}</code>
+                              <button
+                                type="button"
+                                className="copy-release-button"
+                                onClick={(event) => handleCopyRelease(row.Release, row._rowIndex || i, event)}
+                                title="Copiar nombre del release"
+                              >
+                                {copiedRow === (row._rowIndex || i) ? "✓" : "⧉"}
+                              </button>
+                            </div>
+                          </div>
+                          <div className="detail-block">
+                            <span className="detail-caption">Descripción</span>
+                            <p className="detail-description">
+                              {row.Funcionalidades || row["en Base a"] || "Sin descripción registrada para este release."}
+                            </p>
+                          </div>
                           {row["en Base a"] && (
-                            <><strong>En base a:</strong> {row["en Base a"]}</>
+                            <div className="detail-block">
+                              <strong>En base a:</strong> {row["en Base a"]}
+                            </div>
                           )}
                           {row.createdByEmail && (
-                            <><br /><strong>Creado por:</strong> {row.createdByName || row.createdByEmail} ({row.createdByEmail})</>
+                            <div className="detail-block">
+                              <strong>Creado por:</strong> {row.createdByName || row.createdByEmail} ({row.createdByEmail})
+                            </div>
                           )}
                           {row.updatedByEmail && (
-                            <><br /><strong>Actualizado por:</strong> {row.updatedByName || row.updatedByEmail} ({row.updatedByEmail})</>
+                            <div className="detail-block">
+                              <strong>Actualizado por:</strong> {row.updatedByName || row.updatedByEmail} ({row.updatedByEmail})
+                            </div>
                           )}
                         </div>
                       </td>
