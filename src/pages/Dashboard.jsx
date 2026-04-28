@@ -38,6 +38,7 @@ export default function Dashboard({ user, onLogout }) {
   const [backendStatus, setBackendStatus] = useState(null);
   const [backendChecking, setBackendChecking] = useState(false);
   const [activeProjectTab, setActiveProjectTab] = useState("");
+  const [showGeneralSummary, setShowGeneralSummary] = useState(false);
   const [showProjectSummary, setShowProjectSummary] = useState(false);
   const fileInputRef = useRef(null);
   const canDeleteAll = !isSupabaseBackendEnabled || APPROVER_EMAILS.has(normalizeEmail(user?.email));
@@ -247,31 +248,47 @@ export default function Dashboard({ user, onLogout }) {
       </header>
 
       <main className="main-content">
-        <section className="stats-board" aria-label="Resumen general">
-          <div className="stats-board-header">
+        <section className="stats-board-shell" aria-label="Resumen general">
+          <div className="section-heading">
             <div>
               <h2>Resumen general</h2>
-              <p>Vista unificada de los indicadores principales del portal.</p>
+              <p>Despliega el resumen para comparar los indicadores principales del portal.</p>
             </div>
+            <button
+              type="button"
+              className={`summary-toggle ${showGeneralSummary ? "active" : ""}`}
+              onClick={() => setShowGeneralSummary((current) => !current)}
+              aria-expanded={showGeneralSummary}
+              aria-controls="general-summary-panel"
+            >
+              <span>Resumen general</span>
+              <strong>{showGeneralSummary ? "Ocultar" : "Mostrar"}</strong>
+            </button>
           </div>
-          <div className="stats-bar">
-            {dashboardStats.map((stat) => (
-              <div className="stat-row" key={stat.label}>
-                <div className="stat-row-top">
-                  <span className={`stat-label ${stat.tone ? `stat-${stat.tone}` : ""}`}>{stat.label}</span>
-                  <span className={`stat-number stat-number-inline ${stat.tone ? `stat-${stat.tone}` : ""}`}>
-                    {stat.value}
-                  </span>
+
+          <div
+            id="general-summary-panel"
+            className={`stats-board ${showGeneralSummary ? "open" : "closed"}`}
+          >
+            <div className="stats-bar">
+              {dashboardStats.map((stat) => (
+                <div className="stat-row" key={stat.label}>
+                  <div className="stat-row-top">
+                    <span className={`stat-label ${stat.tone ? `stat-${stat.tone}` : ""}`}>{stat.label}</span>
+                    <span className={`stat-number stat-number-inline ${stat.tone ? `stat-${stat.tone}` : ""}`}>
+                      {stat.value}
+                    </span>
+                  </div>
+                  <div className="stat-bar-track" aria-hidden="true">
+                    <div
+                      className={`stat-bar-fill stat-bar-fill-${stat.tone}`}
+                      style={{ width: `${(stat.value / maxDashboardValue) * 100}%` }}
+                    />
+                  </div>
+                  <span className="stat-detail">{stat.detail}</span>
                 </div>
-                <div className="stat-bar-track" aria-hidden="true">
-                  <div
-                    className={`stat-bar-fill stat-bar-fill-${stat.tone}`}
-                    style={{ width: `${(stat.value / maxDashboardValue) * 100}%` }}
-                  />
-                </div>
-                <span className="stat-detail">{stat.detail}</span>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </section>
 
@@ -339,8 +356,11 @@ export default function Dashboard({ user, onLogout }) {
                             type="button"
                             onClick={() => handleEdit(row)}
                           >
-                            <span className="release-name">{row.Release || "Sin release"}</span>
-                            <span className="release-meta">{row.Flujo || "Sin flujo"}</span>
+                            <span className="release-index">{row._rowIndex || "-"}</span>
+                            <div className="release-main">
+                              <span className="release-name">{row.Release || "Sin release"}</span>
+                              <span className="release-meta">{row.Flujo || "Sin flujo"}</span>
+                            </div>
                             <span className="release-state">
                               {inProduction ? "Pase a producción" : active ? "Activo" : "Inactivo"}
                             </span>

@@ -252,12 +252,35 @@ body {
 .btn-logout:hover { border-color: var(--danger); color: var(--danger); }
 
 /* Stats bar */
+.stats-board-shell {
+  margin-bottom: 24px;
+}
+
 .stats-board {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 20px 22px;
-  margin-bottom: 24px;
+  overflow: hidden;
+  transform-origin: top;
+  transition: max-height 0.28s ease, opacity 0.24s ease, transform 0.24s ease, margin-top 0.24s ease, padding 0.24s ease, border-color 0.24s ease;
+}
+
+.stats-board.open {
+  max-height: 520px;
+  opacity: 1;
+  transform: translateY(0);
+  margin-top: 0;
+}
+
+.stats-board.closed {
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-8px);
+  margin-top: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  border-color: transparent;
 }
 
 .stats-board-header {
@@ -494,14 +517,14 @@ body {
 }
 
 .project-release-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .project-release-item {
-  min-height: 86px;
-  padding: 12px;
+  min-height: 0;
+  padding: 12px 14px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface2);
@@ -509,10 +532,10 @@ body {
   cursor: pointer;
   text-align: left;
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  align-items: center;
+  gap: 12px;
   font-family: var(--sans);
-  transition: border-color 0.2s, transform 0.1s;
+  transition: border-color 0.2s, background 0.2s, transform 0.1s;
 }
 
 .project-release-item:hover {
@@ -533,6 +556,22 @@ body {
   opacity: 0.72;
 }
 
+.release-index {
+  width: 40px;
+  flex-shrink: 0;
+  color: var(--text3);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.release-main {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .release-name {
   color: var(--text);
   font-family: var(--mono);
@@ -550,6 +589,7 @@ body {
 
 .release-state {
   width: fit-content;
+  flex-shrink: 0;
   border-radius: 100px;
   padding: 2px 8px;
   background: var(--surface);
@@ -1097,7 +1137,11 @@ body {
   .header-left .subtitle { display: none; }
   .card-header { flex-direction: column; }
   .stats-board { padding: 16px; }
+  .stats-board.closed { padding-top: 0; padding-bottom: 0; }
   .stat-row-top { align-items: flex-start; flex-direction: column; gap: 4px; }
+  .project-release-item { align-items: flex-start; flex-wrap: wrap; }
+  .release-index { width: auto; }
+  .release-state { margin-left: 0; }
   .card-actions-row,
   .record-search-input,
   .btn-refresh,
