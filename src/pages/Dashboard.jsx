@@ -1,5 +1,5 @@
 // src/pages/Dashboard.jsx
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import ReleaseForm from "../components/ReleaseForm";
 import ReleaseTable from "../components/ReleaseTable";
 import { useLocalStorage } from "../hooks/useLocalStorage";
@@ -27,6 +27,33 @@ export default function Dashboard({ user, onLogout }) {
   const [backendStatus, setBackendStatus] = useState(null);
   const [backendChecking, setBackendChecking] = useState(false);
   const fileInputRef = useRef(null);
+  const projectSummary = useMemo(() => {
+    const grouped = data.reduce((acc, row) => {
+      const project = row.Proyecto || "Sin proyecto";
+      if (!acc[project]) {
+        acc[project] = {
+          project,
+          total: 0,
+          active: 0,
+          production: 0,
+          pendingProduction: 0,
+          latestRelease: "",
+        };
+      }
+
+      acc[project].total += 1;
+      if (isYes(row.Activo)) acc[project].active += 1;
+      if (isYes(row["Pase a producción"])) {
+        acc[project].production += 1;
+      } else {
+        acc[project].pendingProduction += 1;
+      }
+      acc[project].latestRelease = row.Release || acc[project].latestRelease;
+      return acc;
+    }, {});
+
+    return Object.values(grouped).sort((a, b) => b.total - a.total || a.project.localeCompare(b.project));
+  }, [data]);
 
   const loadData = useCallback(async () => {
     setFetchError(null);
@@ -129,7 +156,7 @@ export default function Dashboard({ user, onLogout }) {
             <h1>Release Candidate Manager</h1>
             <p className="subtitle">
               {isSupabaseBackendEnabled
-                ? "Gestión compartida con acceso Google"
+                ? "Gestión compartida con acceso por correo"
                 : "Gestión de Releases y Funcionalidades (Local)"}
             </p>
           </div>
@@ -181,6 +208,45 @@ export default function Dashboard({ user, onLogout }) {
             <span className="stat-label">Proyectos activos</span>
           </div>
         </div>
+
+        <section className="project-dashboard">
+          <div className="section-heading">
+            <div>
+              <h2>Resumen por proyecto</h2>
+              <p>Bloques agrupados por proyecto con conteo de releases y pases a producción.</p>
+            </div>
+          </div>
+
+          {projectSummary.length === 0 ? (
+            <div className="project-empty">Aún no hay registros para agrupar.</div>
+          ) : (
+            <div className="project-grid">
+              {projectSummary.map((item) => (
+                <article className="project-card" key={item.project}>
+                  <div className="project-card-header">
+                    <h3>{item.project}</h3>
+                    <span className="status-badge status-neutral">{item.active} activos</span>
+                  </div>
+                  <div className="project-card-metrics">
+                    <div>
+                      <strong>{item.total}</strong>
+                      <span>Releases</span>
+                    </div>
+                    <div>
+                      <strong>{item.production}</strong>
+                      <span>Pase prod.</span>
+                    </div>
+                    <div>
+                      <strong>{item.pendingProduction}</strong>
+                      <span>Pendientes</span>
+                    </div>
+                  </div>
+                  <p className="project-latest">{item.latestRelease || "Sin release registrado"}</p>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
 
         <div className="tabs">
           <button
@@ -242,6 +308,7 @@ export default function Dashboard({ user, onLogout }) {
               <ReleaseForm
                 onSuccess={handleSuccess}
                 editData={editData}
+                existingData={data}
                 onCancelEdit={() => setEditData(null)}
               />
             </div>
