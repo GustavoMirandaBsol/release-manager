@@ -1,6 +1,7 @@
 // src/pages/Login.jsx
 import { useState } from "react";
 import { importFromExcel, isSupabaseBackendEnabled } from "../services/localExcelService";
+import { signInWithGoogle } from "../services/authService";
 
 export default function Login({ onLoginSuccess }) {
   const [loading, setLoading] = useState(false);
@@ -9,6 +10,17 @@ export default function Login({ onLoginSuccess }) {
   const handleStartLocalMode = () => {
     setError(null);
     onLoginSuccess();
+  };
+
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      await signInWithGoogle();
+    } catch (err) {
+      setError(`Error al iniciar sesión con Google: ${err.message}`);
+      setLoading(false);
+    }
   };
 
   const handleImportFile = async (e) => {
@@ -42,7 +54,7 @@ export default function Login({ onLoginSuccess }) {
 
         <div className="login-features">
           <div className="feature-item">
-            <span className="feature-icon">💾</span>
+            <span className="feature-icon">DB</span>
             <span>
               {isSupabaseBackendEnabled
                 ? "Base de datos compartida con Supabase"
@@ -71,38 +83,46 @@ export default function Login({ onLoginSuccess }) {
 
         <button
           className="btn-ms-login"
-          onClick={handleStartLocalMode}
+          onClick={isSupabaseBackendEnabled ? handleGoogleLogin : handleStartLocalMode}
           disabled={loading}
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-            <polyline points="17 8 12 3 7 8"></polyline>
-            <line x1="12" y1="3" x2="12" y2="15"></line>
-          </svg>
+          {isSupabaseBackendEnabled ? (
+            <span className="google-mark">G</span>
+          ) : (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+          )}
           {loading
             ? "Iniciando..."
             : isSupabaseBackendEnabled
-              ? "Iniciar en modo compartido"
+              ? "Ingresar con Google"
               : "Iniciar en modo local"}
         </button>
 
-        <div className="divider">O importa un archivo</div>
+        {!isSupabaseBackendEnabled && (
+          <>
+            <div className="divider">O importa un archivo</div>
 
-        <label className="btn-import">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-            <polyline points="17 8 12 3 7 8"></polyline>
-            <line x1="12" y1="3" x2="12" y2="15"></line>
-          </svg>
-          Importar Excel (.xlsx)
-          <input
-            type="file"
-            accept=".xlsx,.xls"
-            onChange={handleImportFile}
-            disabled={loading}
-            style={{ display: "none" }}
-          />
-        </label>
+            <label className="btn-import">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+              Importar Excel (.xlsx)
+              <input
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleImportFile}
+                disabled={loading}
+                style={{ display: "none" }}
+              />
+            </label>
+          </>
+        )}
 
         <p className="login-footer">
           {isSupabaseBackendEnabled

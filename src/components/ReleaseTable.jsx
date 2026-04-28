@@ -150,11 +150,19 @@ export default function ReleaseTable({ data, onEdit, onDelete, loading, search, 
                       </button>
                     </td>
                   </tr>
-                  {expandedRow === i && row["en Base a"] && (
+                  {expandedRow === i && (row["en Base a"] || row.createdByEmail || row.updatedByEmail) && (
                     <tr className="detail-row" key={`detail-${i}`}>
                       <td colSpan={8}>
                         <div className="detail-panel">
-                          <strong>En base a:</strong> {row["en Base a"]}
+                          {row["en Base a"] && (
+                            <><strong>En base a:</strong> {row["en Base a"]}</>
+                          )}
+                          {row.createdByEmail && (
+                            <><br /><strong>Creado por:</strong> {row.createdByName || row.createdByEmail} ({row.createdByEmail})</>
+                          )}
+                          {row.updatedByEmail && (
+                            <><br /><strong>Actualizado por:</strong> {row.updatedByName || row.updatedByEmail} ({row.updatedByEmail})</>
+                          )}
                         </div>
                       </td>
                     </tr>

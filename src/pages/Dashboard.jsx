@@ -16,7 +16,7 @@ function isYes(value) {
   return ["si", "sí", "hecho", "listo"].includes(String(value || "").trim().toLowerCase());
 }
 
-export default function Dashboard({ onLogout }) {
+export default function Dashboard({ user, onLogout }) {
   const { call, loading } = useLocalStorage();
   const [data, setData] = useState([]);
   const [activeTab, setActiveTab] = useState("form");
@@ -127,18 +127,22 @@ export default function Dashboard({ onLogout }) {
           <div className="logo-mark">RC</div>
           <div>
             <h1>Release Candidate Manager</h1>
-            <p className="subtitle">Gestión de Releases y Funcionalidades (Local)</p>
+            <p className="subtitle">
+              {isSupabaseBackendEnabled
+                ? "Gestión compartida con acceso Google"
+                : "Gestión de Releases y Funcionalidades (Local)"}
+            </p>
           </div>
         </div>
         <div className="header-right">
           <div className="user-info">
-            <div className="user-avatar">L</div>
+            <div className="user-avatar">{user?.email?.[0]?.toUpperCase() || "L"}</div>
             <div>
               <p className="user-name">
-                {isSupabaseBackendEnabled ? "Modo Compartido" : "Modo Local"}
+                {isSupabaseBackendEnabled ? user?.name || "Modo Compartido" : "Modo Local"}
               </p>
               <p className="user-email">
-                {isSupabaseBackendEnabled ? "Base de datos Supabase" : "Almacenamiento en navegador"}
+                {isSupabaseBackendEnabled ? user?.email || "Base de datos Supabase" : "Almacenamiento en navegador"}
               </p>
             </div>
           </div>

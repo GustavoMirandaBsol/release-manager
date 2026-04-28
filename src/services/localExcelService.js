@@ -1,6 +1,7 @@
 // src/services/localExcelService.js
 import * as XLSX from "xlsx";
 import { isSupabaseConfigured, supabase } from "./supabaseClient";
+import { getCurrentUserProfile } from "./authService";
 
 const RELEASE_SHEET_NAME = "Release y funcionalidades";
 const RELEASE_TABLE = "release_records";
@@ -138,7 +139,25 @@ function normalizeReleaseRow(row, fallbackRowIndex) {
   return normalized;
 }
 
-function toDatabaseRow(row) {
+function buildAuditFields(profile, mode = "insert") {
+  if (!profile) return {};
+
+  const fields = {
+    updated_by_user_id: profile.id,
+    updated_by_email: profile.email,
+    updated_by_name: profile.name,
+  };
+
+  if (mode === "insert") {
+    fields.created_by_user_id = profile.id;
+    fields.created_by_email = profile.email;
+    fields.created_by_name = profile.name;
+  }
+
+  return fields;
+}
+
+function toDatabaseRow(row, profile = null, mode = "insert") {
   const normalized = normalizeReleaseRow(row, row._rowIndex || 0);
   return {
     release: normalized.Release,
@@ -149,11 +168,12 @@ function toDatabaseRow(row) {
     pase_a_produccion: normalized["Pase a producción"] || "NO",
     fecha_de_pase: normalized["Fecha de Pase"] || null,
     activo: normalized.Activo || "SI",
+    ...buildAuditFields(profile, mode),
   };
 }
 
 function fromDatabaseRow(row, index = 0) {
-  return normalizeReleaseRow(
+  const normalized = normalizeReleaseRow(
     {
       _rowIndex: row.id || index + 2,
       Release: row.release,
@@ -167,12 +187,30 @@ function fromDatabaseRow(row, index = 0) {
     },
     row.id || index + 2
   );
+
+  return {
+    ...normalized,
+    createdAt: row.created_at || "",
+    updatedAt: row.updated_at || "",
+    createdByEmail: row.created_by_email || "",
+    createdByName: row.created_by_name || "",
+    updatedByEmail: row.updated_by_email || "",
+    updatedByName: row.updated_by_name || "",
+  };
 }
 
 function ensureSupabaseReady() {
   if (!isSupabaseConfigured || !supabase) {
     throw new Error("Supabase no está configurado");
   }
+}
+
+async function ensureSupabaseUser() {
+  const profile = await getCurrentUserProfile();
+  if (!profile) {
+    throw new Error("Debes iniciar sesión con Google para usar la base compartida.");
+  }
+  return profile;
 }
 
 function getSupabaseErrorMessage(error, action) {
@@ -288,6 +326,7 @@ async function fetchReleaseDataFromSupabase() {
 
 async function replaceReleaseDataInSupabase(rows) {
   ensureSupabaseReady();
+  const profile = await ensureSupabaseUser();
 
   const { error: deleteError } = await supabase
     .from(RELEASE_TABLE)
@@ -299,7 +338,7 @@ async function replaceReleaseDataInSupabase(rows) {
 
   const { data, error } = await supabase
     .from(RELEASE_TABLE)
-    .insert(rows.map(toDatabaseRow))
+    .insert(rows.map((row) => toDatabaseRow(row, profile, "insert")))
     .select("*");
 
   if (error) throw new Error(getSupabaseErrorMessage(error, "importar registros"));
@@ -318,6 +357,7 @@ export async function checkDataBackend({ testWrite = false } = {}) {
   }
 
   ensureSupabaseReady();
+  await ensureSupabaseUser();
 
   const readResult = await supabase
     .from(RELEASE_TABLE)
@@ -353,10 +393,11 @@ export async function checkDataBackend({ testWrite = false } = {}) {
     "Fecha de Pase": "",
     Activo: "NO",
   };
+  const profile = await ensureSupabaseUser();
 
   const insertResult = await supabase
     .from(RELEASE_TABLE)
-    .insert(toDatabaseRow(testRow))
+    .insert(toDatabaseRow(testRow, profile, "insert"))
     .select("id")
     .single();
 
@@ -408,9 +449,10 @@ export async function fetchReleaseData() {
 export async function appendReleaseRow(rowData) {
   if (isSupabaseConfigured) {
     ensureSupabaseReady();
+    const profile = await ensureSupabaseUser();
     const { data, error } = await supabase
       .from(RELEASE_TABLE)
-      .insert(toDatabaseRow(rowData))
+      .insert(toDatabaseRow(rowData, profile, "insert"))
       .select("*")
       .single();
 
@@ -436,10 +478,11 @@ export async function appendReleaseRow(rowData) {
 export async function updateReleaseRow(rowIndex, rowData) {
   if (isSupabaseConfigured) {
     ensureSupabaseReady();
+    const profile = await ensureSupabaseUser();
     const { data, error } = await supabase
       .from(RELEASE_TABLE)
       .update({
-        ...toDatabaseRow(rowData),
+        ...toDatabaseRow(rowData, profile, "update"),
         updated_at: new Date().toISOString(),
       })
       .eq("id", rowIndex)
@@ -464,6 +507,7 @@ export async function updateReleaseRow(rowIndex, rowData) {
 export async function deleteReleaseRow(rowIndex) {
   if (isSupabaseConfigured) {
     ensureSupabaseReady();
+    await ensureSupabaseUser();
     const { error } = await supabase
       .from(RELEASE_TABLE)
       .delete()

@@ -120,6 +120,20 @@ body {
 .btn-ms-login:hover { opacity: 0.92; transform: translateY(-1px); }
 .btn-ms-login:disabled { opacity: 0.6; cursor: not-allowed; }
 
+.google-mark {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #4285f4;
+  color: #fff;
+  font-family: Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .divider {
   display: flex;
   align-items: center;
