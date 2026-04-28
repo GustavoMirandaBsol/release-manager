@@ -37,6 +37,7 @@ jobs:
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_APPROVER_EMAILS: ${{ secrets.VITE_APPROVER_EMAILS }}
         run: |
           if [ -z "$VITE_SUPABASE_URL" ]; then
             echo "Missing GitHub Actions secret: VITE_SUPABASE_URL"
@@ -45,6 +46,9 @@ jobs:
           if [ -z "$VITE_SUPABASE_ANON_KEY" ]; then
             echo "Missing GitHub Actions secret: VITE_SUPABASE_ANON_KEY"
             exit 1
+          fi
+          if [ -z "$VITE_APPROVER_EMAILS" ]; then
+            echo "Warning: GitHub Actions secret VITE_APPROVER_EMAILS is empty. Delete-all will stay restricted for everyone."
           fi
           echo "Supabase secrets are configured."
 
@@ -57,6 +61,7 @@ jobs:
           VITE_EXCEL_FILE_ID: ${{ secrets.VITE_EXCEL_FILE_ID }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_APPROVER_EMAILS: ${{ secrets.VITE_APPROVER_EMAILS }}
         run: npm run build
 
       - name: Setup Pages
