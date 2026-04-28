@@ -27,78 +27,6 @@ const APPROVER_EMAILS = new Set(
     .filter(Boolean)
 );
 
-function toDayKey(value) {
-  if (!value) return "";
-  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value.trim())) {
-    return value.trim();
-  }
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return "";
-  return parsed.toISOString().slice(0, 10);
-}
-
-function getRecordDateKey(row, fallbackIndex) {
-  return (
-    toDayKey(row.createdAt) ||
-    toDayKey(row.updatedAt) ||
-    toDayKey(row["Fecha de Pase"]) ||
-    `seq-${String(fallbackIndex).padStart(6, "0")}`
-  );
-}
-
-function getProductionDateKey(row, fallbackIndex) {
-  return toDayKey(row["Fecha de Pase"]) || getRecordDateKey(row, fallbackIndex);
-}
-
-function getTrendPoints(series, width = 180, height = 56) {
-  if (!series.length) return "";
-
-  const padding = 6;
-  const values = series.map((item) => item.value);
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const range = max - min || 1;
-  const stepX = series.length === 1 ? 0 : (width - padding * 2) / (series.length - 1);
-
-  return series
-    .map((item, index) => {
-      const x = padding + stepX * index;
-      const y = height - padding - ((item.value - min) / range) * (height - padding * 2);
-      return `${x},${y}`;
-    })
-    .join(" ");
-}
-
-function TrendStatCard({ label, value, tone, series, detail }) {
-  const polylinePoints = getTrendPoints(series);
-
-  return (
-    <div className="stat-item">
-      <div className="stat-chart">
-        <svg className="stat-chart-svg" viewBox="0 0 180 56" aria-hidden="true" preserveAspectRatio="none">
-          <path className={`stat-chart-grid stat-chart-grid-${tone}`} d="M6 50 H174" />
-          {polylinePoints ? (
-            <polyline
-              className={`stat-chart-line stat-chart-line-${tone}`}
-              fill="none"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="3"
-              points={polylinePoints}
-            />
-          ) : (
-            <path className={`stat-chart-line stat-chart-line-${tone}`} d="M6 28 H174" />
-          )}
-        </svg>
-      </div>
-      <span className="stat-number">{value}</span>
-      <span className={`stat-label ${tone ? `stat-${tone}` : ""}`}>{label}</span>
-      <span className="stat-detail">{detail}</span>
-    </div>
-  );
-}
-
 export default function Dashboard({ user, onLogout }) {
   const { call, loading } = useLocalStorage();
   const [data, setData] = useState([]);
@@ -147,106 +75,42 @@ export default function Dashboard({ user, onLogout }) {
       }))
       .sort((a, b) => b.total - a.total || a.project.localeCompare(b.project));
   }, [data]);
-  const dashboardStats = useMemo(() => {
-    const groupedRecords = new Map();
-    const groupedProduction = new Map();
-
-    data.forEach((row, index) => {
-      const fallbackIndex = Number(row._rowIndex) || index + 1;
-      const recordKey = getRecordDateKey(row, fallbackIndex);
-      const productionKey = getProductionDateKey(row, fallbackIndex);
-      const recordBucket = groupedRecords.get(recordKey) || {
-        key: recordKey,
-        total: 0,
-        active: 0,
-        pending: 0,
-        projects: new Set(),
-      };
-
-      recordBucket.total += 1;
-      if (isYes(row.Activo)) recordBucket.active += 1;
-      if (!isYes(row["Pase a producción"])) recordBucket.pending += 1;
-      if (row.Proyecto) recordBucket.projects.add(row.Proyecto);
-      groupedRecords.set(recordKey, recordBucket);
-
-      if (isYes(row["Pase a producción"])) {
-        const productionBucket = groupedProduction.get(productionKey) || { key: productionKey, total: 0 };
-        productionBucket.total += 1;
-        groupedProduction.set(productionKey, productionBucket);
-      }
-    });
-
-    const sortKeys = (a, b) => a.localeCompare(b);
-    const recordSeries = [];
-    const productionSeries = [];
-    let cumulativeTotal = 0;
-    let cumulativeActive = 0;
-    let cumulativePending = 0;
-    const projects = new Set();
-
-    Array.from(groupedRecords.keys()).sort(sortKeys).forEach((key) => {
-      const bucket = groupedRecords.get(key);
-      cumulativeTotal += bucket.total;
-      cumulativeActive += bucket.active;
-      cumulativePending += bucket.pending;
-      bucket.projects.forEach((project) => projects.add(project));
-
-      recordSeries.push({
-        key,
-        total: cumulativeTotal,
-        active: cumulativeActive,
-        pending: cumulativePending,
-        projects: projects.size,
-      });
-    });
-
-    let cumulativeProduction = 0;
-    Array.from(groupedProduction.keys()).sort(sortKeys).forEach((key) => {
-      cumulativeProduction += groupedProduction.get(key).total;
-      productionSeries.push({
-        key,
-        production: cumulativeProduction,
-      });
-    });
-
-    return [
-      {
-        label: "Registros totales",
-        value: data.length,
-        tone: "accent",
-        detail: recordSeries.length > 1 ? "Tendencia acumulada de registros" : "Aun no hay historial suficiente",
-        series: recordSeries.map((item) => ({ key: item.key, value: item.total })),
-      },
-      {
-        label: "Activos",
-        value: data.filter((row) => isYes(row.Activo)).length,
-        tone: "ok",
-        detail: recordSeries.length > 1 ? "Releases activos por fecha de alta" : "Sin variacion historica",
-        series: recordSeries.map((item) => ({ key: item.key, value: item.active })),
-      },
-      {
-        label: "Pase a prod.",
-        value: data.filter((row) => isYes(row["Pase a producción"])).length,
-        tone: "ok",
-        detail: productionSeries.length > 1 ? "Pases acumulados por fecha de pase" : "Sin pases registrados aun",
-        series: productionSeries.map((item) => ({ key: item.key, value: item.production })),
-      },
-      {
-        label: "Pendiente pase prod.",
-        value: data.filter((row) => !isYes(row["Pase a producción"])).length,
-        tone: "warn",
-        detail: recordSeries.length > 1 ? "Backlog pendiente sobre altas registradas" : "Sin backlog historico",
-        series: recordSeries.map((item) => ({ key: item.key, value: item.pending })),
-      },
-      {
-        label: "Proyectos activos",
-        value: [...new Set(data.map((row) => row.Proyecto).filter(Boolean))].length,
-        tone: "accent",
-        detail: recordSeries.length > 1 ? "Crecimiento acumulado del portafolio" : "Primer proyecto registrado",
-        series: recordSeries.map((item) => ({ key: item.key, value: item.projects })),
-      },
-    ];
-  }, [data]);
+  const dashboardStats = useMemo(() => ([
+    {
+      label: "Registros totales",
+      value: data.length,
+      tone: "accent",
+      detail: "Total general de releases registrados",
+    },
+    {
+      label: "Activos",
+      value: data.filter((row) => isYes(row.Activo)).length,
+      tone: "ok",
+      detail: "Releases actualmente activos",
+    },
+    {
+      label: "Pase a prod.",
+      value: data.filter((row) => isYes(row["Pase a producción"])).length,
+      tone: "ok",
+      detail: "Releases ya movidos a producción",
+    },
+    {
+      label: "Pendiente pase prod.",
+      value: data.filter((row) => !isYes(row["Pase a producción"])).length,
+      tone: "warn",
+      detail: "Pendientes de programación o ejecución",
+    },
+    {
+      label: "Proyectos activos",
+      value: [...new Set(data.map((row) => row.Proyecto).filter(Boolean))].length,
+      tone: "accent",
+      detail: "Cantidad de proyectos con registros",
+    },
+  ]), [data]);
+  const maxDashboardValue = useMemo(
+    () => Math.max(...dashboardStats.map((stat) => stat.value), 1),
+    [dashboardStats]
+  );
   const selectedProject = projectSummary.find((item) => item.project === activeProjectTab) || projectSummary[0] || null;
 
   useEffect(() => {
@@ -383,18 +247,33 @@ export default function Dashboard({ user, onLogout }) {
       </header>
 
       <main className="main-content">
-        <div className="stats-bar">
-          {dashboardStats.map((stat) => (
-            <TrendStatCard
-              key={stat.label}
-              label={stat.label}
-              value={stat.value}
-              tone={stat.tone}
-              detail={stat.detail}
-              series={stat.series}
-            />
-          ))}
-        </div>
+        <section className="stats-board" aria-label="Resumen general">
+          <div className="stats-board-header">
+            <div>
+              <h2>Resumen general</h2>
+              <p>Vista unificada de los indicadores principales del portal.</p>
+            </div>
+          </div>
+          <div className="stats-bar">
+            {dashboardStats.map((stat) => (
+              <div className="stat-row" key={stat.label}>
+                <div className="stat-row-top">
+                  <span className={`stat-label ${stat.tone ? `stat-${stat.tone}` : ""}`}>{stat.label}</span>
+                  <span className={`stat-number stat-number-inline ${stat.tone ? `stat-${stat.tone}` : ""}`}>
+                    {stat.value}
+                  </span>
+                </div>
+                <div className="stat-bar-track" aria-hidden="true">
+                  <div
+                    className={`stat-bar-fill stat-bar-fill-${stat.tone}`}
+                    style={{ width: `${(stat.value / maxDashboardValue) * 100}%` }}
+                  />
+                </div>
+                <span className="stat-detail">{stat.detail}</span>
+              </div>
+            ))}
+          </div>
+        </section>
 
         <section className="project-dashboard">
           <div className="section-heading">
