@@ -26,6 +26,7 @@ supabase/schema.sql
 ```env
 VITE_SUPABASE_URL=https://TU_PROYECTO.supabase.co
 VITE_SUPABASE_ANON_KEY=TU_SUPABASE_ANON_KEY
+VITE_APPROVER_EMAILS=tu.correo@empresa.com,otro.aprobador@empresa.com
 ```
 
 6. Para GitHub Pages, agrega estos secrets en:
@@ -35,9 +36,12 @@ VITE_SUPABASE_ANON_KEY=TU_SUPABASE_ANON_KEY
 ```text
 VITE_SUPABASE_URL
 VITE_SUPABASE_ANON_KEY
+VITE_APPROVER_EMAILS
 ```
 
 Al hacer push a `main`, GitHub Actions compila la app con esos secrets.
+
+`VITE_APPROVER_EMAILS` define los correos que pueden usar la acción `Eliminar todo` en el panel de registros.
 
 ## Configurar Login Por Correo
 

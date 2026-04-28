@@ -16,6 +16,89 @@ function isYes(value) {
   return ["si", "sí", "hecho", "listo"].includes(String(value || "").trim().toLowerCase());
 }
 
+function normalizeEmail(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+const APPROVER_EMAILS = new Set(
+  String(import.meta.env.VITE_APPROVER_EMAILS || "")
+    .split(",")
+    .map(normalizeEmail)
+    .filter(Boolean)
+);
+
+function toDayKey(value) {
+  if (!value) return "";
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value.trim())) {
+    return value.trim();
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "";
+  return parsed.toISOString().slice(0, 10);
+}
+
+function getRecordDateKey(row, fallbackIndex) {
+  return (
+    toDayKey(row.createdAt) ||
+    toDayKey(row.updatedAt) ||
+    toDayKey(row["Fecha de Pase"]) ||
+    `seq-${String(fallbackIndex).padStart(6, "0")}`
+  );
+}
+
+function getProductionDateKey(row, fallbackIndex) {
+  return toDayKey(row["Fecha de Pase"]) || getRecordDateKey(row, fallbackIndex);
+}
+
+function getTrendPoints(series, width = 180, height = 56) {
+  if (!series.length) return "";
+
+  const padding = 6;
+  const values = series.map((item) => item.value);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+  const stepX = series.length === 1 ? 0 : (width - padding * 2) / (series.length - 1);
+
+  return series
+    .map((item, index) => {
+      const x = padding + stepX * index;
+      const y = height - padding - ((item.value - min) / range) * (height - padding * 2);
+      return `${x},${y}`;
+    })
+    .join(" ");
+}
+
+function TrendStatCard({ label, value, tone, series, detail }) {
+  const polylinePoints = getTrendPoints(series);
+
+  return (
+    <div className="stat-item">
+      <div className="stat-chart">
+        <svg className="stat-chart-svg" viewBox="0 0 180 56" aria-hidden="true" preserveAspectRatio="none">
+          <path className={`stat-chart-grid stat-chart-grid-${tone}`} d="M6 50 H174" />
+          {polylinePoints ? (
+            <polyline
+              className={`stat-chart-line stat-chart-line-${tone}`}
+              fill="none"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="3"
+              points={polylinePoints}
+            />
+          ) : (
+            <path className={`stat-chart-line stat-chart-line-${tone}`} d="M6 28 H174" />
+          )}
+        </svg>
+      </div>
+      <span className="stat-number">{value}</span>
+      <span className={`stat-label ${tone ? `stat-${tone}` : ""}`}>{label}</span>
+      <span className="stat-detail">{detail}</span>
+    </div>
+  );
+}
+
 export default function Dashboard({ user, onLogout }) {
   const { call, loading } = useLocalStorage();
   const [data, setData] = useState([]);
@@ -29,6 +112,7 @@ export default function Dashboard({ user, onLogout }) {
   const [activeProjectTab, setActiveProjectTab] = useState("");
   const [showProjectSummary, setShowProjectSummary] = useState(false);
   const fileInputRef = useRef(null);
+  const canDeleteAll = !isSupabaseBackendEnabled || APPROVER_EMAILS.has(normalizeEmail(user?.email));
   const projectSummary = useMemo(() => {
     const grouped = data.reduce((acc, row) => {
       const project = row.Proyecto || "Sin proyecto";
@@ -62,6 +146,106 @@ export default function Dashboard({ user, onLogout }) {
         releases: item.releases.slice().sort((a, b) => String(b.Release).localeCompare(String(a.Release))),
       }))
       .sort((a, b) => b.total - a.total || a.project.localeCompare(b.project));
+  }, [data]);
+  const dashboardStats = useMemo(() => {
+    const groupedRecords = new Map();
+    const groupedProduction = new Map();
+
+    data.forEach((row, index) => {
+      const fallbackIndex = Number(row._rowIndex) || index + 1;
+      const recordKey = getRecordDateKey(row, fallbackIndex);
+      const productionKey = getProductionDateKey(row, fallbackIndex);
+      const recordBucket = groupedRecords.get(recordKey) || {
+        key: recordKey,
+        total: 0,
+        active: 0,
+        pending: 0,
+        projects: new Set(),
+      };
+
+      recordBucket.total += 1;
+      if (isYes(row.Activo)) recordBucket.active += 1;
+      if (!isYes(row["Pase a producción"])) recordBucket.pending += 1;
+      if (row.Proyecto) recordBucket.projects.add(row.Proyecto);
+      groupedRecords.set(recordKey, recordBucket);
+
+      if (isYes(row["Pase a producción"])) {
+        const productionBucket = groupedProduction.get(productionKey) || { key: productionKey, total: 0 };
+        productionBucket.total += 1;
+        groupedProduction.set(productionKey, productionBucket);
+      }
+    });
+
+    const sortKeys = (a, b) => a.localeCompare(b);
+    const recordSeries = [];
+    const productionSeries = [];
+    let cumulativeTotal = 0;
+    let cumulativeActive = 0;
+    let cumulativePending = 0;
+    const projects = new Set();
+
+    Array.from(groupedRecords.keys()).sort(sortKeys).forEach((key) => {
+      const bucket = groupedRecords.get(key);
+      cumulativeTotal += bucket.total;
+      cumulativeActive += bucket.active;
+      cumulativePending += bucket.pending;
+      bucket.projects.forEach((project) => projects.add(project));
+
+      recordSeries.push({
+        key,
+        total: cumulativeTotal,
+        active: cumulativeActive,
+        pending: cumulativePending,
+        projects: projects.size,
+      });
+    });
+
+    let cumulativeProduction = 0;
+    Array.from(groupedProduction.keys()).sort(sortKeys).forEach((key) => {
+      cumulativeProduction += groupedProduction.get(key).total;
+      productionSeries.push({
+        key,
+        production: cumulativeProduction,
+      });
+    });
+
+    return [
+      {
+        label: "Registros totales",
+        value: data.length,
+        tone: "accent",
+        detail: recordSeries.length > 1 ? "Tendencia acumulada de registros" : "Aun no hay historial suficiente",
+        series: recordSeries.map((item) => ({ key: item.key, value: item.total })),
+      },
+      {
+        label: "Activos",
+        value: data.filter((row) => isYes(row.Activo)).length,
+        tone: "ok",
+        detail: recordSeries.length > 1 ? "Releases activos por fecha de alta" : "Sin variacion historica",
+        series: recordSeries.map((item) => ({ key: item.key, value: item.active })),
+      },
+      {
+        label: "Pase a prod.",
+        value: data.filter((row) => isYes(row["Pase a producción"])).length,
+        tone: "ok",
+        detail: productionSeries.length > 1 ? "Pases acumulados por fecha de pase" : "Sin pases registrados aun",
+        series: productionSeries.map((item) => ({ key: item.key, value: item.production })),
+      },
+      {
+        label: "Pendiente pase prod.",
+        value: data.filter((row) => !isYes(row["Pase a producción"])).length,
+        tone: "warn",
+        detail: recordSeries.length > 1 ? "Backlog pendiente sobre altas registradas" : "Sin backlog historico",
+        series: recordSeries.map((item) => ({ key: item.key, value: item.pending })),
+      },
+      {
+        label: "Proyectos activos",
+        value: [...new Set(data.map((row) => row.Proyecto).filter(Boolean))].length,
+        tone: "accent",
+        detail: recordSeries.length > 1 ? "Crecimiento acumulado del portafolio" : "Primer proyecto registrado",
+        series: recordSeries.map((item) => ({ key: item.key, value: item.projects })),
+      },
+    ];
   }, [data]);
   const selectedProject = projectSummary.find((item) => item.project === activeProjectTab) || projectSummary[0] || null;
 
@@ -200,34 +384,16 @@ export default function Dashboard({ user, onLogout }) {
 
       <main className="main-content">
         <div className="stats-bar">
-          <div className="stat-item">
-            <span className="stat-number">{data.length}</span>
-            <span className="stat-label">Registros totales</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-number">
-              {data.filter((r) => isYes(r.Activo)).length}
-            </span>
-            <span className="stat-label stat-ok">Activos</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-number">
-              {data.filter((r) => isYes(r["Pase a producción"])).length}
-            </span>
-            <span className="stat-label stat-ok">Pase a prod.</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-number">
-              {data.filter((r) => !isYes(r["Pase a producción"])).length}
-            </span>
-            <span className="stat-label stat-warn">Pendiente pase prod.</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-number">
-              {[...new Set(data.map((r) => r.Proyecto).filter(Boolean))].length}
-            </span>
-            <span className="stat-label">Proyectos activos</span>
-          </div>
+          {dashboardStats.map((stat) => (
+            <TrendStatCard
+              key={stat.label}
+              label={stat.label}
+              value={stat.value}
+              tone={stat.tone}
+              detail={stat.detail}
+              series={stat.series}
+            />
+          ))}
         </div>
 
         <section className="project-dashboard">
@@ -402,12 +568,24 @@ export default function Dashboard({ user, onLogout }) {
                   <button
                     className="btn-refresh btn-danger"
                     onClick={handleDeleteAll}
-                    disabled={loading || importLoading || data.length === 0}
+                    disabled={loading || importLoading || data.length === 0 || !canDeleteAll}
+                    title={
+                      canDeleteAll
+                        ? "Eliminar todos los registros"
+                        : "Solo los usuarios configurados como aprobadores pueden eliminar todos los registros."
+                    }
                   >
                     Eliminar todo
                   </button>
                 </div>
               </div>
+              {!canDeleteAll && isSupabaseBackendEnabled && (
+                <div className="card-inline-note">
+                  Solo el usuario aprobador puede usar <strong>Eliminar todo</strong>. Configura su correo en
+                  <code> VITE_APPROVER_EMAILS </code>
+                  para habilitarlo.
+                </div>
+              )}
               {fetchError && (
                 <div className="alert alert-error">
                   <span>⚠ Error al cargar: {fetchError}</span>

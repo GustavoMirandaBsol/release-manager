@@ -262,10 +262,10 @@ body {
 
 .stat-item {
   background: var(--surface);
-  padding: 20px 28px;
+  padding: 18px 22px 20px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .stat-number {
@@ -276,10 +276,39 @@ body {
   line-height: 1;
 }
 
+.stat-chart {
+  height: 56px;
+  margin-bottom: 2px;
+}
+
+.stat-chart-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.stat-chart-grid {
+  stroke: #33415555;
+  stroke-width: 1;
+}
+
+.stat-chart-line {
+  vector-effect: non-scaling-stroke;
+}
+
+.stat-chart-line-accent { stroke: var(--accent); }
+.stat-chart-line-ok { stroke: var(--success); }
+.stat-chart-line-warn { stroke: var(--warn); }
+.stat-chart-grid-accent { stroke: #3b82f655; }
+.stat-chart-grid-ok { stroke: #22c55e55; }
+.stat-chart-grid-warn { stroke: #f59e0b55; }
+
 .stat-label { font-size: 12px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; }
+.stat-detail { font-size: 11px; color: var(--text3); line-height: 1.45; }
 .stat-danger .stat-number,
 .stat-item:has(.stat-danger) .stat-number { color: var(--danger); }
 .stat-item:has(.stat-ok) .stat-number { color: var(--success); }
+.stat-item:has(.stat-warn) .stat-number { color: var(--warn); }
 .stat-warn .stat-number { color: var(--warn); }
 .stat-danger { color: var(--danger); }
 .stat-ok { color: var(--success); }
@@ -590,6 +619,23 @@ body {
   justify-content: flex-end;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.card-inline-note {
+  padding: 12px 28px 0;
+  color: var(--text3);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.card-inline-note strong {
+  color: var(--text2);
+}
+
+.card-inline-note code {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--accent);
 }
 
 .record-search-input {
