@@ -311,74 +311,179 @@ body {
   margin: 24px 0 20px;
 }
 
-.project-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 12px;
-}
-
-.project-card {
+.project-tabs-panel {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px;
-  min-height: 150px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
 }
 
-.project-card-header {
+.project-tabs {
+  display: flex;
+  gap: 1px;
+  overflow-x: auto;
+  background: var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.project-tab {
+  min-width: 150px;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: none;
+  color: var(--text2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.project-tab strong {
+  min-width: 26px;
+  padding: 1px 8px;
+  border-radius: 100px;
+  background: var(--surface2);
+  color: var(--text3);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.project-tab:hover,
+.project-tab.active {
+  background: var(--surface2);
+  color: var(--text);
+}
+
+.project-tab.active {
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.project-release-panel {
+  padding: 18px;
+}
+
+.project-release-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 10px;
+  gap: 16px;
+  margin-bottom: 14px;
 }
 
-.project-card h3 {
-  font-size: 15px;
-  line-height: 1.25;
+.project-release-header h3 {
+  font-size: 16px;
   font-weight: 700;
 }
 
-.project-card-metrics {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+.project-release-header p {
+  color: var(--text3);
+  font-size: 12px;
+  margin-top: 2px;
 }
 
-.project-card-metrics div {
-  background: var(--surface2);
+.project-release-summary {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.project-release-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.project-release-item {
+  min-height: 86px;
+  padding: 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 8px;
-}
-
-.project-card-metrics strong {
-  display: block;
-  font-family: var(--mono);
-  color: var(--accent);
-  font-size: 18px;
-  line-height: 1;
-}
-
-.project-card-metrics span {
-  display: block;
-  color: var(--text3);
-  font-size: 10px;
-  margin-top: 4px;
-  text-transform: uppercase;
-}
-
-.project-latest {
+  background: var(--surface2);
   color: var(--text2);
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-family: var(--sans);
+  transition: border-color 0.2s, transform 0.1s;
+}
+
+.project-release-item:hover {
+  transform: translateY(-1px);
+}
+
+.project-release-item.active-release {
+  border-color: #f59e0b80;
+  background: #f59e0b14;
+}
+
+.project-release-item.production {
+  border-color: #22c55e80;
+  background: #22c55e14;
+}
+
+.project-release-item.neutral {
+  opacity: 0.72;
+}
+
+.release-name {
+  color: var(--text);
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.5;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.release-meta {
+  color: var(--text3);
+  font-size: 11px;
+}
+
+.release-state {
+  width: fit-content;
+  border-radius: 100px;
+  padding: 2px 8px;
+  background: var(--surface);
+  color: var(--text2);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.project-legend {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 14px;
+  color: var(--text3);
+  font-size: 12px;
+}
+
+.project-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.legend-dot.active-release,
+.status-active-release { background: #f59e0b20; color: #fcd34d; }
+
+.legend-dot.production { background: var(--success); }
 
 .project-empty {
   background: var(--surface);

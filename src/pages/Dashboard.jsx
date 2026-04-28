@@ -26,6 +26,7 @@ export default function Dashboard({ user, onLogout }) {
   const [importLoading, setImportLoading] = useState(false);
   const [backendStatus, setBackendStatus] = useState(null);
   const [backendChecking, setBackendChecking] = useState(false);
+  const [activeProjectTab, setActiveProjectTab] = useState("");
   const fileInputRef = useRef(null);
   const projectSummary = useMemo(() => {
     const grouped = data.reduce((acc, row) => {
@@ -38,6 +39,7 @@ export default function Dashboard({ user, onLogout }) {
           production: 0,
           pendingProduction: 0,
           latestRelease: "",
+          releases: [],
         };
       }
 
@@ -49,11 +51,29 @@ export default function Dashboard({ user, onLogout }) {
         acc[project].pendingProduction += 1;
       }
       acc[project].latestRelease = row.Release || acc[project].latestRelease;
+      acc[project].releases.push(row);
       return acc;
     }, {});
 
-    return Object.values(grouped).sort((a, b) => b.total - a.total || a.project.localeCompare(b.project));
+    return Object.values(grouped)
+      .map((item) => ({
+        ...item,
+        releases: item.releases.slice().sort((a, b) => String(b.Release).localeCompare(String(a.Release))),
+      }))
+      .sort((a, b) => b.total - a.total || a.project.localeCompare(b.project));
   }, [data]);
+  const selectedProject = projectSummary.find((item) => item.project === activeProjectTab) || projectSummary[0] || null;
+
+  useEffect(() => {
+    if (!projectSummary.length) {
+      setActiveProjectTab("");
+      return;
+    }
+
+    if (!projectSummary.some((item) => item.project === activeProjectTab)) {
+      setActiveProjectTab(projectSummary[0].project);
+    }
+  }, [activeProjectTab, projectSummary]);
 
   const loadData = useCallback(async () => {
     setFetchError(null);
@@ -213,37 +233,71 @@ export default function Dashboard({ user, onLogout }) {
           <div className="section-heading">
             <div>
               <h2>Resumen por proyecto</h2>
-              <p>Bloques agrupados por proyecto con conteo de releases y pases a producción.</p>
+              <p>Selecciona un proyecto para revisar releases activos y pasados a producción.</p>
             </div>
           </div>
 
           {projectSummary.length === 0 ? (
             <div className="project-empty">Aún no hay registros para agrupar.</div>
           ) : (
-            <div className="project-grid">
-              {projectSummary.map((item) => (
-                <article className="project-card" key={item.project}>
-                  <div className="project-card-header">
-                    <h3>{item.project}</h3>
-                    <span className="status-badge status-neutral">{item.active} activos</span>
+            <div className="project-tabs-panel">
+              <div className="project-tabs" role="tablist" aria-label="Proyectos">
+                {projectSummary.map((item) => (
+                  <button
+                    key={item.project}
+                    className={`project-tab ${selectedProject?.project === item.project ? "active" : ""}`}
+                    onClick={() => setActiveProjectTab(item.project)}
+                    type="button"
+                    role="tab"
+                    aria-selected={selectedProject?.project === item.project}
+                  >
+                    <span>{item.project}</span>
+                    <strong>{item.total}</strong>
+                  </button>
+                ))}
+              </div>
+
+              {selectedProject && (
+                <div className="project-release-panel">
+                  <div className="project-release-header">
+                    <div>
+                      <h3>{selectedProject.project}</h3>
+                      <p>{selectedProject.total} releases registrados</p>
+                    </div>
+                    <div className="project-release-summary">
+                      <span className="status-badge status-active-release">{selectedProject.active} activos</span>
+                      <span className="status-badge status-ok">{selectedProject.production} pase prod.</span>
+                      <span className="status-badge status-pending">{selectedProject.pendingProduction} pendientes</span>
+                    </div>
                   </div>
-                  <div className="project-card-metrics">
-                    <div>
-                      <strong>{item.total}</strong>
-                      <span>Releases</span>
-                    </div>
-                    <div>
-                      <strong>{item.production}</strong>
-                      <span>Pase prod.</span>
-                    </div>
-                    <div>
-                      <strong>{item.pendingProduction}</strong>
-                      <span>Pendientes</span>
-                    </div>
+
+                  <div className="project-release-list">
+                    {selectedProject.releases.map((row) => {
+                      const inProduction = isYes(row["Pase a producción"]);
+                      const active = isYes(row.Activo);
+                      return (
+                        <button
+                          key={row._rowIndex || row.Release}
+                          className={`project-release-item ${inProduction ? "production" : active ? "active-release" : "neutral"}`}
+                          type="button"
+                          onClick={() => handleEdit(row)}
+                        >
+                          <span className="release-name">{row.Release || "Sin release"}</span>
+                          <span className="release-meta">{row.Flujo || "Sin flujo"}</span>
+                          <span className="release-state">
+                            {inProduction ? "Pase a producción" : active ? "Activo" : "Inactivo"}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
-                  <p className="project-latest">{item.latestRelease || "Sin release registrado"}</p>
-                </article>
-              ))}
+
+                  <div className="project-legend">
+                    <span><i className="legend-dot active-release" /> Activos</span>
+                    <span><i className="legend-dot production" /> Pasados a producción</span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </section>
