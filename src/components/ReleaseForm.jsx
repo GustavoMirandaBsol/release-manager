@@ -3,6 +3,7 @@ import { useMemo, useState, useEffect } from "react";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import { useProjectsConfig } from "../hooks/useProjectsConfig";
 import { useFlowsConfig } from "../hooks/useFlowsConfig";
+import { useGitService } from "../services/gitService";
 import { appendReleaseRow, updateReleaseRow, fetchNomenclatura } from "../services/localExcelService";
 
 const RELEASE_MODES = {
@@ -144,9 +145,12 @@ export default function ReleaseForm({ onSuccess, editData, onCancelEdit, existin
   const [autoRelease, setAutoRelease] = useState(true);
   const [isEditingRelease, setIsEditingRelease] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [createBranchAutomatically, setCreateBranchAutomatically] = useState(false);
+  const [gitOperationStatus, setGitOperationStatus] = useState(null);
   const { call, loading, error, setError } = useLocalStorage();
   const { projects: configProjects } = useProjectsConfig();
   const { flows: configFlows } = useFlowsConfig();
+  const gitService = useGitService();
 
   useEffect(() => {
     call(fetchNomenclatura).then(setNomenclatura).catch(() => {});
@@ -175,20 +179,43 @@ export default function ReleaseForm({ onSuccess, editData, onCancelEdit, existin
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setGitOperationStatus(null);
+
     try {
+      // Primero guardar el release
       if (editData?._rowIndex) {
         await call(updateReleaseRow, editData._rowIndex, form);
       } else {
         await call(appendReleaseRow, form);
       }
+
+      // Si está habilitado, crear la branch automáticamente
+      if (createBranchAutomatically && form.Proyecto && form.Release) {
+        try {
+          setGitOperationStatus({ status: 'creating', message: 'Creando branch en repositorio...' });
+          const branchName = gitService.generateBranchName(form.Release, releaseMode);
+          const result = await gitService.createBranch(form.Proyecto, branchName);
+          setGitOperationStatus({ status: 'success', message: result.message });
+        } catch (gitError) {
+          setGitOperationStatus({
+            status: 'error',
+            message: `Release guardado, pero error al crear branch: ${gitError.message}`
+          });
+        }
+      }
+
       setSuccess(true);
       setForm(EMPTY_FORM);
       setReleaseDetail("");
       setConsolidatedProjectsText("");
       setAutoRelease(true);
+      setIsEditingRelease(false);
+      setCreateBranchAutomatically(false);
       onSuccess?.();
       if (editData) onCancelEdit?.();
-    } catch (_) {}
+    } catch (error) {
+      setError(error.message);
+    }
   };
 
   const proyectosOpciones = nomenclatura.proyectos.length
@@ -394,6 +421,33 @@ export default function ReleaseForm({ onSuccess, editData, onCancelEdit, existin
           </select>
         </div>
       </div>
+
+      {!editData && (
+        <div className="form-group">
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={createBranchAutomatically}
+              onChange={(e) => setCreateBranchAutomatically(e.target.checked)}
+            />
+            Crear branch automáticamente en el repositorio del proyecto
+          </label>
+          <span className="hint">
+            Se creará una branch con el nombre del release (ej: candidate/release-name o release/release-name)
+          </span>
+        </div>
+      )}
+
+      {gitOperationStatus && (
+        <div className={`alert ${gitOperationStatus.status === 'success' ? 'alert-success' : gitOperationStatus.status === 'error' ? 'alert-error' : 'alert-info'}`}>
+          <span>
+            {gitOperationStatus.status === 'creating' && '⏳ '}
+            {gitOperationStatus.status === 'success' && '✓ '}
+            {gitOperationStatus.status === 'error' && '⚠ '}
+            {gitOperationStatus.message}
+          </span>
+        </div>
+      )}
 
       {error && (
         <div className="alert alert-error">

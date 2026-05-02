@@ -4,6 +4,7 @@ import ReleaseForm from "../components/ReleaseForm";
 import ReleaseTable from "../components/ReleaseTable";
 import ProjectManager from "../components/ProjectManager";
 import FlowManager from "../components/FlowManager";
+import ReposManager from "../components/ReposManager";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import {
   fetchReleaseData,
@@ -467,6 +468,12 @@ export default function Dashboard({ user, onLogout }) {
             ⚙ Flujos
           </button>
           <button
+            className={`tab ${activeTab === "repositorios" ? "active" : ""}`}
+            onClick={() => setActiveTab("repositorios")}
+          >
+            🗂 Repositorios
+          </button>
+          <button
             className="tab"
             onClick={() => fileInputRef.current?.click()}
             disabled={importLoading}
@@ -582,6 +589,12 @@ export default function Dashboard({ user, onLogout }) {
           {activeTab === "flujos" && (
             <div className="card">
               <FlowManager />
+            </div>
+          )}
+
+          {activeTab === "repositorios" && (
+            <div className="card">
+              <ReposManager />
             </div>
           )}
         </div>
