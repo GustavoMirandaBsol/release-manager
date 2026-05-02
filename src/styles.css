@@ -901,6 +901,41 @@ body {
   color: var(--text);
 }
 
+.release-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.release-input-wrapper input {
+  width: 100%;
+  padding-right: 60px;
+}
+
+.release-icons {
+  position: absolute;
+  right: 10px;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.release-icon-btn {
+  background: transparent;
+  border: none;
+  color: var(--text2);
+  cursor: pointer;
+  font-size: 18px;
+  padding: 4px 6px;
+  transition: color 0.2s, transform 0.1s;
+  border-radius: 4px;
+}
+
+.release-icon-btn:hover {
+  color: var(--accent);
+  transform: scale(1.1);
+}
+
 .form-actions { display: flex; justify-content: flex-end; gap: 12px; }
 
 .btn-primary {

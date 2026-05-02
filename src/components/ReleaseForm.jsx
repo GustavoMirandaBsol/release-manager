@@ -2,6 +2,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import { useProjectsConfig } from "../hooks/useProjectsConfig";
+import { useFlowsConfig } from "../hooks/useFlowsConfig";
 import { appendReleaseRow, updateReleaseRow, fetchNomenclatura } from "../services/localExcelService";
 
 const RELEASE_MODES = {
@@ -145,6 +146,7 @@ export default function ReleaseForm({ onSuccess, editData, onCancelEdit, existin
   const [success, setSuccess] = useState(false);
   const { call, loading, error, setError } = useLocalStorage();
   const { projects: configProjects } = useProjectsConfig();
+  const { flows: configFlows } = useFlowsConfig();
 
   useEffect(() => {
     call(fetchNomenclatura).then(setNomenclatura).catch(() => {});
@@ -194,7 +196,7 @@ export default function ReleaseForm({ onSuccess, editData, onCancelEdit, existin
     : configProjects;
   const flujosOpciones = nomenclatura.flujos?.length
     ? nomenclatura.flujos
-    : ["Carpeta Transversal", "Flujo digital", "Flujo híbrido", "Transferencia de Leads", "Flujo Originación", "Diferimiento", "Transversal"];
+    : configFlows;
   const consolidatedProjects = useMemo(
     () => consolidatedProjectsText
       .split(/[,\n;]/)
@@ -281,21 +283,37 @@ export default function ReleaseForm({ onSuccess, editData, onCancelEdit, existin
 
         <div className="form-group">
           <label>Release</label>
-          <input
-            type="text"
-            name="Release"
-            value={form.Release}
-            onChange={handleChange}
-            readOnly={!isEditingRelease}
-            placeholder="Ej: 2024.Q1.001"
-            required
-          />
-          {!isEditingRelease && (
-            <div className="release-actions">
-              <button type="button" onClick={() => navigator.clipboard.writeText(form.Release)}>Copiar</button>
-              <button type="button" onClick={() => setIsEditingRelease(true)}>Modificar</button>
-            </div>
-          )}
+          <div className="release-input-wrapper">
+            <input
+              type="text"
+              name="Release"
+              value={form.Release}
+              onChange={handleChange}
+              readOnly={!isEditingRelease}
+              placeholder="Ej: 2024.Q1.001"
+              required
+            />
+            {!isEditingRelease && form.Release && (
+              <div className="release-icons">
+                <button
+                  type="button"
+                  className="release-icon-btn"
+                  onClick={() => navigator.clipboard.writeText(form.Release)}
+                  title="Copiar release"
+                >
+                  📋
+                </button>
+                <button
+                  type="button"
+                  className="release-icon-btn"
+                  onClick={() => setIsEditingRelease(true)}
+                  title="Editar release"
+                >
+                  ✎
+                </button>
+              </div>
+            )}
+          </div>
           {!editData && (
             <div className="release-helper">
               <button type="button" className="inline-action" onClick={handleGenerateRelease}>
