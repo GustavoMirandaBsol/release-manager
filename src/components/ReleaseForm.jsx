@@ -1,6 +1,7 @@
 // src/components/ReleaseForm.jsx
 import { useMemo, useState, useEffect } from "react";
 import { useLocalStorage } from "../hooks/useLocalStorage";
+import { useProjectsConfig } from "../hooks/useProjectsConfig";
 import { appendReleaseRow, updateReleaseRow, fetchNomenclatura } from "../services/localExcelService";
 
 const RELEASE_MODES = {
@@ -143,6 +144,7 @@ export default function ReleaseForm({ onSuccess, editData, onCancelEdit, existin
   const [isEditingRelease, setIsEditingRelease] = useState(false);
   const [success, setSuccess] = useState(false);
   const { call, loading, error, setError } = useLocalStorage();
+  const { projects: configProjects } = useProjectsConfig();
 
   useEffect(() => {
     call(fetchNomenclatura).then(setNomenclatura).catch(() => {});
@@ -189,7 +191,7 @@ export default function ReleaseForm({ onSuccess, editData, onCancelEdit, existin
 
   const proyectosOpciones = nomenclatura.proyectos.length
     ? nomenclatura.proyectos
-    : ["CRM", "BUM", "BFF-PB", "WC-PB", "Reporting Services", "Document Library", "Signature", "CRA", "Web Client-Loans"];
+    : configProjects;
   const flujosOpciones = nomenclatura.flujos?.length
     ? nomenclatura.flujos
     : ["Carpeta Transversal", "Flujo digital", "Flujo híbrido", "Transferencia de Leads", "Flujo Originación", "Diferimiento", "Transversal"];

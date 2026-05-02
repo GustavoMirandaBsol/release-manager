@@ -2,6 +2,7 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import ReleaseForm from "../components/ReleaseForm";
 import ReleaseTable from "../components/ReleaseTable";
+import ProjectManager from "../components/ProjectManager";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import {
   fetchReleaseData,
@@ -453,6 +454,12 @@ export default function Dashboard({ user, onLogout }) {
             <span className="tab-count">{data.length}</span>
           </button>
           <button
+            className={`tab ${activeTab === "proyectos" ? "active" : ""}`}
+            onClick={() => setActiveTab("proyectos")}
+          >
+            ⚙ Proyectos
+          </button>
+          <button
             className="tab"
             onClick={() => fileInputRef.current?.click()}
             disabled={importLoading}
@@ -556,6 +563,12 @@ export default function Dashboard({ user, onLogout }) {
                 search={searchTerm}
                 onSearchChange={setSearchTerm}
               />
+            </div>
+          )}
+
+          {activeTab === "proyectos" && (
+            <div className="card">
+              <ProjectManager />
             </div>
           )}
         </div>
