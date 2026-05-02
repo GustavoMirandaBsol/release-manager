@@ -140,6 +140,7 @@ export default function ReleaseForm({ onSuccess, editData, onCancelEdit, existin
   const [releaseDetail, setReleaseDetail] = useState("");
   const [consolidatedProjectsText, setConsolidatedProjectsText] = useState("");
   const [autoRelease, setAutoRelease] = useState(true);
+  const [isEditingRelease, setIsEditingRelease] = useState(false);
   const [success, setSuccess] = useState(false);
   const { call, loading, error, setError } = useLocalStorage();
 
@@ -157,6 +158,7 @@ export default function ReleaseForm({ onSuccess, editData, onCancelEdit, existin
       setReleaseDetail("");
       setConsolidatedProjectsText("");
       setAutoRelease(true);
+      setIsEditingRelease(false);
     }
   }, [editData]);
 
@@ -187,10 +189,10 @@ export default function ReleaseForm({ onSuccess, editData, onCancelEdit, existin
 
   const proyectosOpciones = nomenclatura.proyectos.length
     ? nomenclatura.proyectos
-    : ["Crm", "BUM", "BFF-PB", "WC-PB", "Reporting Services", "document Library", "Signature", "CRA", "Web Client-Loans"];
+    : ["CRM", "BUM", "BFF-PB", "WC-PB", "Reporting Services", "Document Library", "Signature", "CRA", "Web Client-Loans"];
   const flujosOpciones = nomenclatura.flujos?.length
     ? nomenclatura.flujos
-    : ["Carpeta Transversal", "Flujo digital", "Flujo hibrido", "Transferencia de Leads", "Flujo Originación", "Diferimiento", "Tranversal"];
+    : ["Carpeta Transversal", "Flujo digital", "Flujo híbrido", "Transferencia de Leads", "Flujo Originación", "Diferimiento", "Transversal"];
   const consolidatedProjects = useMemo(
     () => consolidatedProjectsText
       .split(/[,\n;]/)
@@ -252,7 +254,7 @@ export default function ReleaseForm({ onSuccess, editData, onCancelEdit, existin
                   setReleaseDetail(e.target.value);
                   setAutoRelease(true);
                 }}
-                placeholder="Ej: SureSolution_CreditoDigital"
+                placeholder="Escribe el nombre del release a crear"
               />
               <span className="hint">Si lo dejas vacío usa flujo + proyecto.</span>
             </div>
@@ -282,9 +284,16 @@ export default function ReleaseForm({ onSuccess, editData, onCancelEdit, existin
             name="Release"
             value={form.Release}
             onChange={handleChange}
+            readOnly={!isEditingRelease}
             placeholder="Ej: 2024.Q1.001"
             required
           />
+          {!isEditingRelease && (
+            <div className="release-actions">
+              <button type="button" onClick={() => navigator.clipboard.writeText(form.Release)}>Copiar</button>
+              <button type="button" onClick={() => setIsEditingRelease(true)}>Modificar</button>
+            </div>
+          )}
           {!editData && (
             <div className="release-helper">
               <button type="button" className="inline-action" onClick={handleGenerateRelease}>
